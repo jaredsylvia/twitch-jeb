@@ -3,22 +3,85 @@ require('dotenv').config();
 const express = require('express');
 const fetch = require('node-fetch');
 const tmi = require('tmi.js');
+const cookieParser = require('cookie-parser');
+const WebSocket = require('ws');
+const path = require('path');
+const ejs = require('ejs');
+const { send } = require('process');
+const { get } = require('http');
 
 // Get variables from .env
 const twitchUsername = process.env.TWITCH_USERNAME;
 const twitchChannel = process.env.TWITCH_CHANNEL;
 const twitchClientId = process.env.TWITCH_CLIENT_ID;
 const twitchSecret = process.env.TWITCH_SECRET;
+const twitchUserID = process.env.TWITCH_USERID;
+let twitchOAuthToken;
 const serverIp = process.env.SERVER_IP;
 const serverPort = process.env.SERVER_PORT || 3000;
 const serverBaseUrl = process.env.SERVER_BASE_URL;
 
 // Define configuration options for Twitch bot
+const twitchTokenUrl = 'https://id.twitch.tv/oauth2/token';
 let twitchBotOpts = null;
 let twitchBotClient = null;
 
 // Create an Express app
 const app = express();
+app.use(cookieParser());
+
+// Serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Set EJS as the view engine
+app.set('view engine', 'ejs');
+
+// Start the web server
+const server = app.listen(serverPort, serverIp, () => {
+    console.log(`Server listening on ${serverIp}:${serverPort}`);
+    console.log(`Base URL: ${serverBaseUrl}`);
+});
+
+// Create a WebSocket server
+const wss = new WebSocket.Server({ server });
+
+// Handle WebSocket connections
+wss.on('connection', (ws) => {
+    console.log('WebSocket connected');
+    //Send confirmation of connection
+    
+    ws.send(JSON.stringify({ type: 'connected' }));
+
+    ws.on('message', async (message) => {
+        const data = JSON.parse(message);
+        
+        switch (data.type) {
+            case 'getInfo':
+                const streamdata = await getStreamData();
+                const channeldata = await getChannelData();
+                const followercount = await getFollowerCount();
+                const data = {
+                    type: 'info',
+                    streamdata,
+                    channeldata,
+                    followercount
+                };
+                sendToWebSocket(data);
+                break;
+            case 'message':
+                twitchBotClient.say(twitchChannel, message);
+                break;
+            default:
+                console.log(`Unknown message type received: ${data.type}`);
+                break;
+        }
+    });
+
+    ws.on('close', () => {
+        console.log('WebSocket disconnected');
+    });
+});
+
 
 // Set up variables
 let flipping = false;
@@ -28,7 +91,36 @@ let winningCoin = '';
 
 // Define a route for the home page
 app.get('/', (req, res) => {
-    res.send('Hello, world!');
+    const twitchRefreshToken = req.cookies?.twitchRefreshToken;
+   
+    if (twitchRefreshToken) {
+        const twitchTokenParams = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: twitchRefreshToken,
+        client_id: twitchClientId,
+        client_secret: twitchSecret
+        });
+
+        fetch(twitchTokenUrl, {
+            method: 'POST',
+            body: twitchTokenParams
+          }).then((response) => {
+            return response.json();
+          }).then((data) => {
+            twitchOAuthToken = data.access_token;
+            res.cookie('twitchOAuthToken', data.access_token);
+            res.cookie('twitchRefreshToken', data.refresh_token);
+
+            createTwitchBot(data.access_token);
+            
+            res.redirect('/dashboard');
+          }).catch((error) => {
+            console.error('Error refreshing access token:', error);
+            res.redirect('/auth/twitch');
+          });
+        } else {
+          res.redirect('/auth/twitch');
+        }    
 });
 
 // Define a route for the Twitch OAuth flow
@@ -59,31 +151,46 @@ app.get('/auth/twitch/callback', async (req, res) => {
 
     const data = await response.json();
 
+    twitchOAuthToken = data.access_token;
+
     // Store the OAuth token in a cookie or session
     res.cookie('twitchOAuthToken', data.access_token);
-    console.log(data);
+    res.cookie('twitchRefreshToken', data.refresh_token);
+    
     // Define configuration options for Twitch bot
-    twitchBotOpts = {
-        identity: {
-            username: twitchUsername,
-            password: data.access_token
-        },
-        channels: [twitchChannel]
+    createTwitchBot(data.access_token);
+    
+    // Redirect to the home page
+    res.redirect('/dashboard');
+});
+
+// Define a route for the dashboard page
+app.get('/dashboard', (req, res) => {
+    const twitchOAuthToken = req.cookies?.twitchOAuthToken;
+    
+    
+    if (twitchOAuthToken) {
+        res.render('dashboard', { twitchUsername });
+    } else {
+        res.redirect('/auth/twitch');
+    }
+});
+
+async function createTwitchBot() {
+    const twitchBotOpts = {
+      identity: {
+        username: twitchUsername,
+        password: twitchOAuthToken
+      },
+      channels: [twitchChannel]
     };
-
-    // Create a client for Twitch bot
+  
     twitchBotClient = new tmi.client(twitchBotOpts);
-    console.log(twitchBotClient);
-
-    // Connect the Twitch bot client
-
-    await twitchBotClient.connect().catch((error) => {
-        console.error('Error connecting to Twitch:', error);
-
+  
+    twitchBotClient.on('connected', () => {
+      console.log(`Twitch bot connected to channel ${twitchChannel}`);
     });
 
-
-    // Register event handlers for Twitch bot
     twitchBotClient.on('message', onTwitchBotMessageHandler);
     twitchBotClient.on('connected', onTwitchBotConnectedHandler);
     twitchBotClient.on('disconnected', onTwitchBotDisconnectedHandler);
@@ -94,32 +201,110 @@ app.get('/auth/twitch/callback', async (req, res) => {
     twitchBotClient.on('subscription', onTwitchBotSubscriptionHandler);
     twitchBotClient.on('subgift', onTwitchBotSubgiftHandler);
     twitchBotClient.on('submysterygift', onTwitchBotSubmysterygiftHandler);
+    
+    await twitchBotClient.connect();
+  
+    return;
+  }
 
-    //Store current chat stats in variables
-    //let currentSubs = twitchBotClient.getChannels()[0].subscriberCount;
-    //let currentFollowers = twitchBotClient.getChannels()[0].followerCount;
+// Function to send messages to websocket
+function sendToWebSocket(data) {
+    const stringifiedData = JSON.stringify(data);
 
-    // Redirect to the home page
-    res.redirect('/');
-});
+    wss.clients.forEach((client) => {
+        client.send(stringifiedData);
+    });
+}
 
-// Start the server
-app.listen(serverPort, serverIp, () => {
-    console.log(`Server listening on ${serverIp}:${serverPort}`);
-    console.log(`Base URL: ${serverBaseUrl}`);
-});
+// Functions to get data from Twitch API
+async function getStreamData() {
+    const response = await fetch(`https://api.twitch.tv/helix/streams?user_id=${twitchUserID}`, {
+        method: 'GET',
+        headers: {
+            'Client-ID': twitchClientId,
+            'Authorization': `Bearer ${twitchOAuthToken}`
+        }
+    });
+
+    if (response.status !== 200) {
+        console.log(`Error: Twitch API returned status ${response.status}`);
+        return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.data.length === 0) {
+        console.log(`User is not currently streaming`);
+        return null;
+    }
+
+    return data;
+}
+
+async function getChannelData() {
+    const response = await fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${twitchUserID}`, {
+        method: 'GET',
+        headers: {
+            'Client-ID': twitchClientId,
+            'Authorization': `Bearer ${twitchOAuthToken}`
+        }
+    });
+
+    if (response.status !== 200) {
+        console.log(`Error: Twitch API returned status ${response.status}`);
+        return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.data.length === 0) {
+        console.log(`User does not have a channel`);
+        return null;
+    }
+        
+    return data;
+}
+
+async function getFollowerCount() {
+    const response = await fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${twitchUserID}`, {
+        method: 'GET',
+        headers: {
+            'Client-ID': twitchClientId,
+            'Authorization': `Bearer ${twitchOAuthToken}`
+        }
+    });
+
+    if (response.status !== 200) {
+        console.log(`Error: Twitch API returned status ${response.status}`);
+        return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.total.length === 0) {
+        console.log(`User does not have any followers`);
+        return null;
+    }
+
+    return data.total;
+}
 
 //Event handler functions
-function onTwitchBotMessageHandler(channel, userstate, message, self) {
-    // Check if command
+async function onTwitchBotMessageHandler(channel, userstate, message, self) {
+    
+    sendToWebSocket({
+        type: 'message',
+        channel,
+        userstate,
+        message
+    });
+    
     const args = message.slice(1).split(' ');
     const command = args.shift().toLowerCase();
     const isBroadcaster = userstate.badges && typeof userstate.badges.broadcaster !== 'undefined';
     const isMod = userstate.mod === true;
-    console.log(`* ${userstate.username}: ${message}`);
-    console.log(`User is broadcaster: ${isBroadcaster}`);
-    console.log(`User is mod: ${isMod}`);
     
+    // Commands
     if (message.startsWith('!')) { // Commands for non moderators
         switch (command) {
             case 'slap':
@@ -360,39 +545,85 @@ function onTwitchBotMessageHandler(channel, userstate, message, self) {
 }
 
 function onTwitchBotConnectedHandler() {
-    console.log(`* Connected to Twitch`);
+    sendToWebSocket({
+        type: 'connected'
+    });
 }
 
 function onTwitchBotDisconnectedHandler(reason) {
-    console.log(`Disconnected from Twitch: ${reason}`);
+    sendToWebSocket({
+        type: 'disconnected',
+        reason
+    });
 }
 
 function onTwitchBotJoinHandler(channel, username, self) {
-    console.log(`* ${username} joined ${channel}`);
+    sendToWebSocket({
+        type: 'join',
+        channel,
+        username
+    });
+
 }
 
-function onTwitchBotFollowHandler(channel, username, self) {
-    console.log(`* ${username} followed ${channel}`);
+async function onTwitchBotFollowHandler(channel, username, self) {
+    
+    sendToWebSocket({
+        type: 'follow',
+        channel,
+        username
+    });
 }
 
 function onTwitchBotBanHandler(channel, username, reason, userstate) {
-    console.log(`* ${username} was banned from ${channel} for ${reason}`);
+    sendToWebSocket({
+        type: 'ban',
+        channel,
+        username,
+        reason,
+        userstate
+    });
 }
 
 function onTwitchBotRaidedHandler(channel, username, viewers) {
-    console.log(`* ${username} raided ${channel} with ${viewers} viewers`);
+    sendToWebSocket({
+        type: 'raided',
+        channel,
+        username,
+        viewers
+    });
 }
 
 function onTwitchBotSubscriptionHandler(channel, username, method, message, userstate) {
-    console.log(`* ${username} subscribed to ${channel} using ${method} (${message})`);
+    sendToWebSocket({
+        type: 'subscription',
+        channel,
+        username,
+        method,
+        message,
+        userstate
+    });
 }
 
 function onTwitchBotSubgiftHandler(channel, username, streakMonths, recipient, methods, userstate) {
-    console.log(`* ${username} gifted a subscription to ${recipient} for ${streakMonths} months`);
+    sendToWebSocket({
+        type: 'subgift',
+        channel,
+        username,
+        streakMonths,
+        recipient,
+        methods,
+        userstate
+    });
 }
 
 function onTwitchBotSubmysterygiftHandler(channel, username, numbOfSubs, methods, userstate) {
-    console.log(`* ${username} gifted ${numbOfSubs} subscriptions`);
+    sendToWebSocket({
+        type: 'submysterygift',
+        channel,
+        username,
+        numbOfSubs,
+        methods,
+        userstate
+    });
 }
-
-

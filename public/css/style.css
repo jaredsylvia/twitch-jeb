@@ -1,0 +1,42 @@
+/* Set the background color of the body to a dark gray color */
+body {
+    background-color: #222222;
+}
+
+/* Set the font color of the body to a light gray color */
+body {
+    color: #CCCCCC;
+}
+
+/* Style the followers and viewers classes */
+.followers, .viewers {
+    font-size: 16px;
+    font-weight: bold;
+    color: #FFFFFF;
+}
+
+/* Style the channelInfo class */
+.channelInfo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #FFFFFF;
+}
+
+/* Style the chat class */
+.chat {
+    background-color: #333333;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+/* Style the message class */
+.message {
+    font-size: 16px;
+    color: #CCCCCC;
+    margin-bottom: 10px;
+}
+
+/* Style the message text span in the message class */
+.message span.messageText {
+    color: #CCCCCC;
+}
