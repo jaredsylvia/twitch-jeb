@@ -1,5 +1,7 @@
 // Load the things we need
 require('dotenv').config();
+const TwitchBot = require('./twitch/twitchBot.js');
+const WebSocketServer = require('./websocket/webSocketServer.js');
 const express = require('express');
 const fetch = require('node-fetch');
 const tmi = require('tmi.js');
@@ -16,15 +18,14 @@ const twitchChannel = process.env.TWITCH_CHANNEL;
 const twitchClientId = process.env.TWITCH_CLIENT_ID;
 const twitchSecret = process.env.TWITCH_SECRET;
 const twitchUserID = process.env.TWITCH_USERID;
-let twitchOAuthToken;
 const serverIp = process.env.SERVER_IP;
 const serverPort = process.env.SERVER_PORT || 3000;
 const serverBaseUrl = process.env.SERVER_BASE_URL;
 
 // Define configuration options for Twitch bot
 const twitchTokenUrl = 'https://id.twitch.tv/oauth2/token';
-let twitchBotOpts = null;
-let twitchBotClient = null;
+let twitchOAuthToken;
+let twitchBotClient;
 
 // Create an Express app
 const app = express();
@@ -42,52 +43,12 @@ const server = app.listen(serverPort, serverIp, () => {
     console.log(`Base URL: ${serverBaseUrl}`);
 });
 
-// Create a WebSocket server
-const wss = new WebSocket.Server({ server });
-
-// Handle WebSocket connections
-wss.on('connection', (ws) => {
-    console.log('WebSocket connected');
-    //Send confirmation of connection
-    
-    ws.send(JSON.stringify({ type: 'connected' }));
-
-    ws.on('message', async (message) => {
-        const data = JSON.parse(message);
-        
-        switch (data.type) {
-            case 'getInfo':
-                const streamdata = await getStreamData();
-                const channeldata = await getChannelData();
-                const followercount = await getFollowerCount();
-                const data = {
-                    type: 'info',
-                    streamdata,
-                    channeldata,
-                    followercount
-                };
-                sendToWebSocket(data);
-                break;
-            case 'message':
-                twitchBotClient.say(twitchChannel, message);
-                break;
-            default:
-                console.log(`Unknown message type received: ${data.type}`);
-                break;
-        }
-    });
-
-    ws.on('close', () => {
-        console.log('WebSocket disconnected');
-    });
-});
-
-
-// Set up variables
-let flipping = false;
-let heads = [];
-let tails = [];
-let winningCoin = '';
+// Start the websocket server
+let wss = new WebSocketServer(server, twitchClientId, twitchOAuthToken, twitchChannel, twitchUserID);
+async function startWebSocketServer() {
+    await wss.setupWebSocketServer();
+}
+startWebSocketServer ();
 
 // Define a route for the home page
 app.get('/', (req, res) => {
@@ -110,8 +71,6 @@ app.get('/', (req, res) => {
             twitchOAuthToken = data.access_token;
             res.cookie('twitchOAuthToken', data.access_token);
             res.cookie('twitchRefreshToken', data.refresh_token);
-
-            createTwitchBot(data.access_token);
             
             res.redirect('/dashboard');
           }).catch((error) => {
@@ -119,7 +78,7 @@ app.get('/', (req, res) => {
             res.redirect('/auth/twitch');
           });
         } else {
-          res.redirect('/auth/twitch');
+          res.redirect('/dashboard');
         }    
 });
 
@@ -158,8 +117,7 @@ app.get('/auth/twitch/callback', async (req, res) => {
     res.cookie('twitchRefreshToken', data.refresh_token);
     
     // Define configuration options for Twitch bot
-    createTwitchBot(data.access_token);
-    
+
     // Redirect to the home page
     res.redirect('/dashboard');
 });
@@ -171,123 +129,20 @@ app.get('/dashboard', (req, res) => {
     
     if (twitchOAuthToken) {
         res.render('dashboard', { twitchUsername });
+        twitchBotClient = new TwitchBot(twitchUsername, twitchOAuthToken, twitchChannel, wss);
+        async function startTwitchClient() {
+            await twitchBotClient.connect();
+        }
+        wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchChannel);
+        startTwitchClient ();
     } else {
         res.redirect('/auth/twitch');
     }
 });
 
-async function createTwitchBot() {
-    const twitchBotOpts = {
-      identity: {
-        username: twitchUsername,
-        password: twitchOAuthToken
-      },
-      channels: [twitchChannel]
-    };
-  
-    twitchBotClient = new tmi.client(twitchBotOpts);
-  
-    twitchBotClient.on('connected', () => {
-      console.log(`Twitch bot connected to channel ${twitchChannel}`);
-    });
 
-    twitchBotClient.on('message', onTwitchBotMessageHandler);
-    twitchBotClient.on('connected', onTwitchBotConnectedHandler);
-    twitchBotClient.on('disconnected', onTwitchBotDisconnectedHandler);
-    twitchBotClient.on('join', onTwitchBotJoinHandler);
-    twitchBotClient.on('follow', onTwitchBotFollowHandler);
-    twitchBotClient.on('ban', onTwitchBotBanHandler);
-    twitchBotClient.on('raided', onTwitchBotRaidedHandler);
-    twitchBotClient.on('subscription', onTwitchBotSubscriptionHandler);
-    twitchBotClient.on('subgift', onTwitchBotSubgiftHandler);
-    twitchBotClient.on('submysterygift', onTwitchBotSubmysterygiftHandler);
-    
-    await twitchBotClient.connect();
-  
-    return;
-  }
 
-// Function to send messages to websocket
-function sendToWebSocket(data) {
-    const stringifiedData = JSON.stringify(data);
 
-    wss.clients.forEach((client) => {
-        client.send(stringifiedData);
-    });
-}
-
-// Functions to get data from Twitch API
-async function getStreamData() {
-    const response = await fetch(`https://api.twitch.tv/helix/streams?user_id=${twitchUserID}`, {
-        method: 'GET',
-        headers: {
-            'Client-ID': twitchClientId,
-            'Authorization': `Bearer ${twitchOAuthToken}`
-        }
-    });
-
-    if (response.status !== 200) {
-        console.log(`Error: Twitch API returned status ${response.status}`);
-        return null;
-    }
-
-    const data = await response.json();
-    
-    if (data.data.length === 0) {
-        console.log(`User is not currently streaming`);
-        return null;
-    }
-
-    return data;
-}
-
-async function getChannelData() {
-    const response = await fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${twitchUserID}`, {
-        method: 'GET',
-        headers: {
-            'Client-ID': twitchClientId,
-            'Authorization': `Bearer ${twitchOAuthToken}`
-        }
-    });
-
-    if (response.status !== 200) {
-        console.log(`Error: Twitch API returned status ${response.status}`);
-        return null;
-    }
-
-    const data = await response.json();
-    
-    if (data.data.length === 0) {
-        console.log(`User does not have a channel`);
-        return null;
-    }
-        
-    return data;
-}
-
-async function getFollowerCount() {
-    const response = await fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${twitchUserID}`, {
-        method: 'GET',
-        headers: {
-            'Client-ID': twitchClientId,
-            'Authorization': `Bearer ${twitchOAuthToken}`
-        }
-    });
-
-    if (response.status !== 200) {
-        console.log(`Error: Twitch API returned status ${response.status}`);
-        return null;
-    }
-
-    const data = await response.json();
-    
-    if (data.total.length === 0) {
-        console.log(`User does not have any followers`);
-        return null;
-    }
-
-    return data.total;
-}
 
 //Event handler functions
 async function onTwitchBotMessageHandler(channel, userstate, message, self) {
@@ -542,88 +397,4 @@ async function onTwitchBotMessageHandler(channel, userstate, message, self) {
         }
         
     }
-}
-
-function onTwitchBotConnectedHandler() {
-    sendToWebSocket({
-        type: 'connected'
-    });
-}
-
-function onTwitchBotDisconnectedHandler(reason) {
-    sendToWebSocket({
-        type: 'disconnected',
-        reason
-    });
-}
-
-function onTwitchBotJoinHandler(channel, username, self) {
-    sendToWebSocket({
-        type: 'join',
-        channel,
-        username
-    });
-
-}
-
-async function onTwitchBotFollowHandler(channel, username, self) {
-    
-    sendToWebSocket({
-        type: 'follow',
-        channel,
-        username
-    });
-}
-
-function onTwitchBotBanHandler(channel, username, reason, userstate) {
-    sendToWebSocket({
-        type: 'ban',
-        channel,
-        username,
-        reason,
-        userstate
-    });
-}
-
-function onTwitchBotRaidedHandler(channel, username, viewers) {
-    sendToWebSocket({
-        type: 'raided',
-        channel,
-        username,
-        viewers
-    });
-}
-
-function onTwitchBotSubscriptionHandler(channel, username, method, message, userstate) {
-    sendToWebSocket({
-        type: 'subscription',
-        channel,
-        username,
-        method,
-        message,
-        userstate
-    });
-}
-
-function onTwitchBotSubgiftHandler(channel, username, streakMonths, recipient, methods, userstate) {
-    sendToWebSocket({
-        type: 'subgift',
-        channel,
-        username,
-        streakMonths,
-        recipient,
-        methods,
-        userstate
-    });
-}
-
-function onTwitchBotSubmysterygiftHandler(channel, username, numbOfSubs, methods, userstate) {
-    sendToWebSocket({
-        type: 'submysterygift',
-        channel,
-        username,
-        numbOfSubs,
-        methods,
-        userstate
-    });
 }

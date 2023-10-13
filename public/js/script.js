@@ -1,6 +1,10 @@
 $(document).ready(() => {
     const ws = new WebSocket('ws://localhost:3000');
 
+    ws.onerror = (event) => {
+        console.error('WebSocket error:', event);
+    };
+
     ws.onopen = () => {
         console.log('WebSocket client connected');
     };
@@ -38,18 +42,35 @@ $(document).ready(() => {
                 let joinUsername = message.username;
 
                 //Check number of <li> tags in <ul> with id="users"
-                if ($('#users li').length >= 10) {
+                if ($('#recentJoined li').length >= 10) {
                     //Remove first <li> tag in <ul> with id="users"
-                    $('#users li:first').remove();
+                    $('#recentJoined li:first').remove();
                 }
                 //Create user in <li> tag
-                let userHtml = `<li class="userText">${joinUsername}</li>`;
+                let userHtml = `<li class="userText"><span style="color: white">${joinUsername}</span></li>`;
                 //Append user to <ul> with id="users"
-                $('#users').append(userHtml);
+                $('#recentJoined').append(userHtml);
+                $('#alert').empty();
+                $('#alert').append(`<div class="alert alert-success" role="alert"><span style="color: black">${joinUsername} has joined the chat!</span></div>`);
 
                 break;
             case 'follow':
-                console.log(message);
+                // Extract username from message
+                let followUsername = message.username;
+                
+                // Check number of <li> tags in <ul> with id="users"
+                if ($('#recentFollowed li').length >= 10) {
+                    // Remove first <li> tag in <ul> with id="users"
+                    $('#recentFollowed li:first').remove();
+                }
+                // Create user in <li> tag
+                let followHtml = `<li class="userText"><span style="color: white">${followUsername}</span></li>`;
+                // Append user to <ul> with id="users"
+                $('#recentFollowed').append(followHtml);
+                $('#alert').empty();
+                $('#alert').append(`<div class="alert alert-success" role="alert"><span style="color: black">${joinUsername} has followed!!!</span></div>`);
+
+
                 break;
             case 'ban':
                 console.log(message);
@@ -65,10 +86,10 @@ $(document).ready(() => {
                 break;
             case 'info':
                 // Extract relevant information from message
-                let game = message.channeldata.data[0].game_name;
-                let title = message.channeldata.data[0].title;
-                let viewers = (message.streamdata && message.streamdata.data && message.streamdata.data[0].viewer_count) ?? 0;
-                let followers = message.followercount ?? 0;
+                let game = message.channelData.data[0].game_name;
+                let title = message.channelData.data[0].title;
+                let viewers = (message.streamData && message.streamdata.data && message.streamdata.data[0].viewer_count) ?? 0;
+                let followers = message.followerCount ?? 0;
                               
 
                 // Update information on page
@@ -91,6 +112,11 @@ $(document).ready(() => {
     // Update information every 5 seconds
     setInterval(() => {
         ws.send(JSON.stringify({ type : 'getInfo' }));
-    }, 5000);
+    }, 500000);
+    
+    // Reload page every 20 minutes
+    setInterval(() => {
+        location.reload(true);
+    }, 1200000);
 
 });

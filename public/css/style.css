@@ -1,11 +1,13 @@
 /* Set the background color of the body to a dark gray color */
 body {
     background-color: #222222;
+    color: #CCCCCC;
 }
 
-/* Set the font color of the body to a light gray color */
-body {
-    color: #CCCCCC;
+/* Styles for primary portion of information */
+.mainBody {
+    padding-left: 12.5%;
+    padding-right: 12.5%;
 }
 
 /* Style the followers and viewers classes */
@@ -39,4 +41,22 @@ body {
 /* Style the message text span in the message class */
 .message span.messageText {
     color: #CCCCCC;
+}
+
+/* Style alerts area */
+.alertArea {
+    border-radius: 5px;
+    padding-top: 50px;
+    margin-left: 20%;
+    margin-right: 20%;
+}
+
+
+.alert {
+    font-size: 16px;
+    font-weight: bold;
+    color: #FFFFFF;
+    padding: 10px;
+    border-radius: 5px;
+    border: solid 1px #FFFFFF;
 }

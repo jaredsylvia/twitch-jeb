@@ -27,7 +27,7 @@
 					<% } else { %>
 					<p><a href="/auth/twitch">Login with Twitch</a></p>
 					<% } %>
-					<div class="row">
+					<div class="row mainBody" >
 						<div class="col-md-6">
 							<div class="row">
 								<div class="col-md-6 followers">
@@ -42,10 +42,14 @@
 									Game: <p id="game"></p>
 									Stream: <p id="title"></p>
 								</div>
-								<div class="col-md-6 recentFollowers">
+								<div class="col-md-6 recentUsers">
 									Recently Joined: 
 									<ul id="recentJoined">
-										
+									
+									</ul>
+									Recently Followed:
+									<ul id="recentFollowed">
+
 									</ul>
 								</div>
 							</div>
@@ -58,8 +62,8 @@
 						
 						</div>
 					</div>
-					<div class="row">
-						<div class="col-md-12 alerts">
+					<div class="row alertArea">
+						<div class="col-md-12 alert" id="alert">
 							Alerts go here
 						</div>
 					</div>
