@@ -181,6 +181,7 @@ class TwitchBot {
     async onCommand(channel, userstate, message) {
         const args = message.split(' ');
         const trigger = args[0].toLowerCase().substring(1);
+        
         if(trigger === 'help'){
             if(args.length === 1) {
                 this.client.say(channel, `Available commands: ${commands.map(command => command.aliases).join(',')}`);
@@ -198,10 +199,14 @@ class TwitchBot {
             if (command.aliases.includes(trigger)) {
                 try {
                     command.execute(this, channel, args, userstate);
+                    console.log(`Aliases: ${command.aliases}`);
                 } catch (err) {
                     console.log(err);
                 }
+                
+                
             } else if (command.subcommands && command.subcommands.includes(trigger)) {
+                
                 try {
                     command[trigger](this, channel, args, userstate);
                 } catch (err) {

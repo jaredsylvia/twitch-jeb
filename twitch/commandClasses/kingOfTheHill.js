@@ -31,7 +31,7 @@ class KingOfTheHill extends Command {
 
             setTimeout(() => {
                 if (this.kothPlayers.length === 0) {
-                    client.say(channel, `Nobody joined the game!`);
+                    twitchbot.client.say(channel, `Nobody joined the game!`);
                     this.kothActive = false;
                     return;
                 }
@@ -39,7 +39,7 @@ class KingOfTheHill extends Command {
                 const winner = this.kothPlayers[Math.floor(Math.random() * this.kothPlayers.length)];
                 this.kothWinner = winner;
 
-                client.say(channel, `The winner is ${winner}!`);
+                twitchbot.client.say(channel, `The winner is ${winner}!`);
                 this.kothActive = false;
             }, 30000);
         } catch (err) {
@@ -49,22 +49,23 @@ class KingOfTheHill extends Command {
     }
 
     join(twitchbot, channel, args, userstate) {
+        console.log(this.kothActive);
         try {
             if (!this.kothActive) {
                 twitchbot.client.say(channel, `There is no king of the hill game active!`);
                 return;
             }
 
-            if (this.kothPlayers.includes(message.userInfo.displayName)) {
+            if (this.kothPlayers.includes(userstate.username)) {
                 twitchbot.client.say(channel, `You have already joined the game!`);
                 return;
             }
 
-            this.kothPlayers.push(message.userInfo.displayName);
-            twitchbot.client.say(channel, `${message.userInfo.displayName} has joined the game!`);
+            this.kothPlayers.push(userstate.username);
+            twitchbot.client.say(channel, `${userstate.username} has joined the game!`);
         } catch (err) {
-            twitchbot.client.say(channel, `${this.subcommands[0].name}: ${this.subcommands[0].description}`);
-            twitchbot.client.say(channel, `Usage: ${this.subcommands[0].usage}`);
+            twitchbot.client.say(channel, `${this.name}: ${this.description}`);
+            twitchbot.client.say(channel, `Usage: ${this.usage}`);
         }
 
     }
