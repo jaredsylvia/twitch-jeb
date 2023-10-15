@@ -3,6 +3,7 @@ const CoinFlipCommand = require('./commandClasses/coinFlipCommand.js');
 const StandardCommands = require('./commandClasses/standardCommands.js');
 const DiceRoll = require('./commandClasses/diceRoll.js');
 const KingOfTheHill = require('./commandClasses/kingOfTheHill.js');
+const Lurkers = require('./commandClasses/lurkers.js');
 const standardCommands = new StandardCommands();
 
 const commands = [];
@@ -12,7 +13,8 @@ standardCommands.getAllCommands().forEach(command => {
 commands.push(new DiceRoll());
 commands.push(new KingOfTheHill());
 commands.push(new CoinFlipCommand());
-
+commands.push(new Lurkers());
+console.log(commands);
 
 class TwitchBot {
     constructor (username, oauthToken, channel, wss) {
@@ -199,7 +201,6 @@ class TwitchBot {
             if (command.aliases.includes(trigger)) {
                 try {
                     command.execute(this, channel, args, userstate);
-                    console.log(`Aliases: ${command.aliases}`);
                 } catch (err) {
                     console.log(err);
                 }
