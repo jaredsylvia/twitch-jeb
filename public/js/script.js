@@ -109,6 +109,14 @@ $(document).ready(() => {
         ws.send(JSON.stringify({ type : 'getInfo' }));
     });
 
+    $('#startBot').click(() => {
+        ws.send(JSON.stringify({ type : 'startBot' }));
+    });
+
+    $('#stopBot').click(() => {
+        ws.send(JSON.stringify({ type : 'stopBot' }));
+    });
+
     // Update information every 5 seconds
     setInterval(() => {
         ws.send(JSON.stringify({ type : 'getInfo' }));

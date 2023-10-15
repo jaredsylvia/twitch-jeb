@@ -4,9 +4,7 @@ const TwitchBot = require('./twitch/twitchBot.js');
 const WebSocketServer = require('./websocket/webSocketServer.js');
 const express = require('express');
 const fetch = require('node-fetch');
-const tmi = require('tmi.js');
 const cookieParser = require('cookie-parser');
-const WebSocket = require('ws');
 const path = require('path');
 const ejs = require('ejs');
 const { send } = require('process');
@@ -125,16 +123,13 @@ app.get('/auth/twitch/callback', async (req, res) => {
 // Define a route for the dashboard page
 app.get('/dashboard', (req, res) => {
     const twitchOAuthToken = req.cookies?.twitchOAuthToken;
-    
-    
+        
     if (twitchOAuthToken) {
         res.render('dashboard', { twitchUsername });
         twitchBotClient = new TwitchBot(twitchUsername, twitchOAuthToken, twitchChannel, wss);
-        async function startTwitchClient() {
-            await twitchBotClient.connect();
-        }
+        wss.setTwitchBot(twitchBotClient);
         wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchChannel);
-        startTwitchClient ();
+        
     } else {
         res.redirect('/auth/twitch');
     }

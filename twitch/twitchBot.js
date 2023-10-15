@@ -1,5 +1,18 @@
 const tmi = require('tmi.js');
-const CoinFlipCommand = require('./commandClasses/coinFlipCommand');
+const CoinFlipCommand = require('./commandClasses/coinFlipCommand.js');
+const StandardCommands = require('./commandClasses/standardCommands.js');
+const DiceRoll = require('./commandClasses/diceRoll.js');
+const KingOfTheHill = require('./commandClasses/kingOfTheHill.js');
+const standardCommands = new StandardCommands();
+
+const commands = [];
+standardCommands.getAllCommands().forEach(command => {
+    commands.push(command);
+});
+commands.push(new DiceRoll());
+commands.push(new KingOfTheHill());
+commands.push(new CoinFlipCommand());
+
 
 class TwitchBot {
     constructor (username, oauthToken, channel, wss) {
@@ -32,8 +45,14 @@ class TwitchBot {
           },
             channels: [ this.channel ]
         };
-
-        this.client = new tmi.client(options);
+        if(!this.client) {
+            this.client = new tmi.client(options);
+        } else {
+            await this.client.disconnect();
+            this.client = null;
+            this.client = new tmi.client(options);
+        }
+        
 
         this.client.on('connected', this.onTwitchBotConnectedHandler);
         this.client.on('disconnected', this.onTwitchBotDisconnectedHandler);
@@ -49,14 +68,14 @@ class TwitchBot {
         await this.client.connect();
     }
 
+    async disconnect () {
+        await this.client.disconnect();
+    }
+
     async updateWss (wss) {
         this.wss = wss;
     }
-
-    async say (message) {
-        this.client.say(this.channel, message);
-    }
-
+    
     async onTwichBotMessageHandler (channel, userstate, message, self) {
         this.wss.sendToWebSocket({
             type: 'message',
@@ -67,12 +86,10 @@ class TwitchBot {
         });
 
         // extract message
-        const messageText = message.trim();
-        const isCommand = messageText.startsWith('!');
-
+        const isCommand = message.startsWith('!');
+        
         if(isCommand) {
-            const commandName = messageText.substring(1);
-            this.onCommand(commandName, channel, userstate, message);
+            this.onCommand(channel, userstate, message);
         }        
     }
 
@@ -161,195 +178,38 @@ class TwitchBot {
         });
     }
 
-    async onCommand(commandName, channel, userstate) {
-        const args = commandName.split(' ');
-        const isBroadcaster = userstate.badges && userstate.badges.broadcaster === '1';
-        const isMod = userstate.mod || isBroadcaster;
-        const isSub = userstate.subscriber || isBroadcaster;
-        const isVip = userstate.badges && userstate.badges.vip === '1';
-       
-        switch (commandName) {
-            case 'slap':
-                this.client.say(channel, `@${userstate.username} slapped ${message.substring(6)} with a large trout!`);
-                break;
-            case 'lurk':
-                this.client.say(channel, `@${userstate.username} is now lurking!`);
-                break;
-            case 'unlurk':
-                this.client.say(channel, `@${userstate.username} is no longer lurking!`);
-                break;
-            case 'flip':
-                this.coinFlipCommand = new CoinFlipCommand(this, channel);
-                this.coinFlipCommand.flip(userstate);
-                break;
-            case 'heads':
-                if(this.coinFlipCommand) {
-                    this.coinFlipCommand.guess(userstate, 'heads');
+    async onCommand(channel, userstate, message) {
+        const args = message.split(' ');
+        const trigger = args[0].toLowerCase().substring(1);
+        if(trigger === 'help'){
+            if(args.length === 1) {
+                this.client.say(channel, `Available commands: ${commands.map(command => command.aliases).join(',')}`);
+            } else {
+                const command = commands.find(command => command.aliases.includes(args[1]));
+                if(command) {
+                    this.client.say(channel, `${command.name}: ${command.description}`);
+                    this.client.say(channel, `Usage: ${command.usage}`);
                 } else {
-                    this.client.say(channel, `@${userstate.username} there is no coin to flip!`);
+                    this.client.say(channel, `Command not found!`);
                 }
-                break;
-            case 'tails':
-                if(this.coinFlipCommand) {
-                    this.coinFlipCommand.guess(userstate, 'tails');
-                } else {
-                    this.client.say(channel, `@${userstate.username} there is no coin to flip!`);
-                }
-                break;
-            case 'help':
-                switch (args[0]) {
-                    case 'slap':
-                        this.client.say(channel, 'Usage: !slap <username>');
-                        break;
-                    case 'lurk':
-                        this.client.say(channel, 'Usage: !lurk');
-                        break;
-                    case 'unlurk':
-                        this.client.say(channel, 'Usage: !unlurk');
-                        break;
-                    case 'flip':
-                        this.client.say(channel, 'Usage: !flip');
-                        break;
-                    case 'heads':
-                        this.client.say(channel, 'Usage: !heads');
-                        break;
-                    case 'tails':
-                        this.client.say(channel, 'Usage: !tails');
-                        break;
-                    default:
-                        this.client.say(channel, 'Commands: !slap, !lurk, !unlurk, !flip, !heads, !tails');
-                        break;
-                }
+            }
         }
-        if(isMod) {
-            switch (commandName) {
-                case 'ping':
-                    this.client.say(channel, 'Pong!');
-                    break;
-                case 'pong':
-                    this.client.say(channel, 'Ping!');
-                    break;
-                case 'uptime':
-                    this.client.say(channel, 'Uptime!');
-                    break;
-                case 'parrot':
-                    this.client.say(channel, message.substring(7));
-                    break;
-                case 'ban':
-                    this.client.ban(channel, message.substring(5));
-                    break;
-                case 'unban':
-                    this.client.unban(channel, message.substring(7));
-                    break;
-                case 'timeout':
-                    this.client.timeout(channel, message.substring(9));
-                    break;
-                case 'untimeout':
-                    this.client.untimeout(channel, message.substring(11));
-                    break;
-                case 'slow':
-                    this.client.slow(channel, message.substring(6));
-                    break;
-                case 'slowoff':
-                    this.client.slowoff(channel);
-                    break;
-                case 'followers':
-                    this.client.followersonly(channel, message.substring(10));
-                    break;
-                case 'followersoff':
-                    this.client.followersonlyoff(channel);
-                    break;
-                case 'clear':
-                    this.client.clear(channel);
-                    break;
-                case 'emoteonly':
-                    this.client.emoteonly(channel);
-                    break;
-                case 'emoteonlyoff':
-                    this.client.emoteonlyoff(channel);
-                    break;
-                case 'subscribers':
-                    this.client.subscribers(channel);
-                    break;
-                case 'subscribersoff':
-                    this.client.subscribersoff(channel);
-                    break;
-                case 'commercial':
-                    this.client.commercial(channel, message.substring(11));
-                    break;
-                case 'host':
-                    this.client.host(channel, message.substring(6));
-                    break;
-                case 'unhost':
-                    this.client.unhost(channel);
-                    break;
-                case 'raid':
-                    this.client.raid(channel, message.substring(6));
-                    break;
-                case 'modhelp':
-                    switch (args[0]) {
-                        case 'ban':
-                            this.client.say(channel, 'Usage: !ban <username>');
-                            break;
-                        case 'unban':
-                            this.client.say(channel, 'Usage: !unban <username>');
-                            break;
-                        case 'timeout':
-                            this.client.say(channel, 'Usage: !timeout <username> <seconds>');
-                            break;
-                        case 'untimeout':
-                            this.client.say(channel, 'Usage: !untimeout <username>');
-                            break;
-                        case 'slow':
-                            this.client.say(channel, 'Usage: !slow <seconds>');
-                            break;
-                        case 'slowoff':
-                            this.client.say(channel, 'Usage: !slowoff');
-                            break;
-                        case 'followers':
-                            this.client.say(channel, 'Usage: !followers <minutes>');
-                            break;
-                        case 'followersoff':
-                            this.client.say(channel, 'Usage: !followersoff');
-                            break;
-                        case 'clear':
-                            this.client.say(channel, 'Usage: !clear');
-                            break;
-                        case 'emoteonly':
-                            this.client.say(channel, 'Usage: !emoteonly');
-                            break;
-                        case 'emoteonlyoff':
-                            this.client.say(channel, 'Usage: !emoteonlyoff');
-                            break;
-                        case 'subscribers':
-                            this.client.say(channel, 'Usage: !subscribers');
-                            break;
-                        case 'subscribersoff':
-                            this.client.say(channel, 'Usage: !subscribersoff');
-                            break;
-                        case 'commercial':
-                            this.client.say(channel, 'Usage: !commercial <length>');
-                            break;
-                        case 'host':
-                            this.client.say(channel, 'Usage: !host <channel>');
-                            break;
-                        case 'unhost':
-                            this.client.say(channel, 'Usage: !unhost');
-                            break;
-                        case 'raid':
-                            this.client.say(channel, 'Usage: !raid <channel>');
-                            break;
-                        default:
-                            this.client.say(channel, 'Commands: !ban, !unban, !timeout, !untimeout, !slow, !slowoff, !followers, !followersoff, !clear, !emoteonly, !emoteonlyoff, !subscribers, !subscribersoff, !commercial, !host, !unhost, !raid');
-                            break;
-                    }
-                    break;
+        for(const command of commands) {
+            if (command.aliases.includes(trigger)) {
+                try {
+                    command.execute(this, channel, args, userstate);
+                } catch (err) {
+                    console.log(err);
+                }
+            } else if (command.subcommands && command.subcommands.includes(trigger)) {
+                try {
+                    command[trigger](this, channel, args, userstate);
+                } catch (err) {
+                    console.log(err);
+                }
             }
         }
     }
-
-
-    
 
 }
 

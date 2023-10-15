@@ -1,89 +1,95 @@
-class CoinFlipCommand {
-    constructor(client, channel) {
-        this.client = client;
-        this.channel = channel;
-        this.flipping = false;
-        this.heads = [];
-        this.tails = [];
-        this.winningCoin = '';        
-    }
+const Command = require('./command.js');
 
-    flip(userstate) {
+class CoinFlipCommand extends Command {
+    constructor() {
+        super();  
+        this.flipping = false;
+        this.headsGuesses = [];
+        this.tailsGuesses = [];
+        this.winningCoin = '';
+        this.name = 'Coin Flipper';  
+        this.description = 'Initiate a coin flip game.'; 
+        this.usage = '!flip starts a flip, !heads or !tails to guess.'; 
+        this.aliases = ['coinflip', 'flip']; 
+        this.cooldown = 5;  
+        this.subcommands = ['heads', 'tails'];
+        this.execute = this.flip;
+        this.heads = this.guess;
+        this.tails = this.guess;
+    }
+   
+
+    flip(twitchbot, channel, args, userstate) {
         this.flipping = true;
 
-        this.client.say(`@${userstate.username} wants to flip a coin! Type !heads or !tails to guess!`);
+        twitchbot.client.say(channel, `@${userstate.username} wants to flip a coin! Type !heads or !tails to guess!`);
         
         // Give people time to respond using !heads or !tails
         setTimeout(() => {
             setTimeout(() => {
-                this.client.say(`Flipping a coin!`);
+                twitchbot.client.say(channel, `Flipping a coin!`);
                 // Set winning coin
                 this.winningCoin = Math.random() < 0.5 ? 'heads' : 'tails';
                 // Announce winning coin
-                this.client.say(`The coin landed on ${this.winningCoin}!`);
+                twitchbot.client.say(channel, `The coin landed on ${this.winningCoin}!`);
             }, 20000);
     
             // Check who guessed correctly
             setTimeout(() => {
-                this.winner(() => {                
+                this.announceWinner(twitchbot, channel);
                 // Reset variables
-                this.heads = [];
-                this.tails = [];
+                this.headsGuesses = [];
+                this.tailsGuesses = [];
                 this.winningCoin = '';
                 this.flipping = false;
-                });
-                
             }, 22000);
     
         }, 2000);
     }
 
-    guess(userstate, side) {
-        if (this.flipping) {
-            if(this.heads.includes(userstate.username) || this.tails.includes(userstate.username)) {
-                this.client.say(`@${userstate.username} you have already guessed!`);
-            } else {
-                if (side === 'heads') {
-                    this.heads.push(userstate.username);
-                    this.client.say(`@${userstate.username} has guessed ${side}!`);
+    guess(twitchbot, channel, args, userstate) {
+        try {
+            const side = args[0].toLowerCase().substring(1);
+            if (this.flipping) {
+                const username = userstate.username;
+                if (this.headsGuesses.includes(username) || this.tailsGuesses.includes(username)) {
+                    twitchbot.client.say(channel, `@${username} you have already guessed!`);
                 } else {
-                    this.tails.push(userstate.username);
-                    this.client.say(`@${userstate.username} has guessed ${side}!`);
+                    if (side === 'heads') {
+                        this.headsGuesses.push(username);
+                        twitchbot.client.say(channel, `@${username} has guessed ${side}!`);
+                    } else if (side === 'tails') {
+                        this.tailsGuesses.push(username);
+                        twitchbot.client.say(channel, `@${username} has guessed ${side}!`);
+                    } else {
+                        twitchbot.client.say(channel, `@${username} you must guess either heads or tails!`);
+                    }
                 }
             }
-            
+            else {
+                twitchbot.client.say(channel, `There is no coin flip game active!`);
+            }
+        } catch (err) {
+            twitchbot.client.say(channel, `${this.subcommands[0].name}: ${this.subcommands[0].description}`);
+            twitchbot.client.say(channel, `Usage: ${this.subcommands[0].usage}`);
         }
-
     }
 
-    winner() {
-        if(this.winningCoin === 'heads') {
-            if(this.heads.length === 0) {
-                this.client.say(`Nobody guessed correctly!`);
-                return;
-            } else if(this.tails.length === 0) {
-                this.client.say(`Everybody guessed correctly!`);
-                this.client.say(`@${heads[0]} was the first winner!`);
-                return;
-            } else {
-                this.client.say(`The following people guessed correctly: ${heads}`);
-                this.client.say(`@${heads[0]} was the first winner!`);
-                this.client.say(`@${tails[0]} is the biggest loser!`);
-            }             
-            
+    announceWinner(twitchbot, channel, args, userstate) {
+        const correctGuesses = this.winningCoin === 'heads' ? this.headsGuesses : this.tailsGuesses;
+        const incorrectGuesses = this.winningCoin === 'heads' ? this.tailsGuesses : this.headsGuesses;
+        if (correctGuesses.length === 0) {
+            twitchbot.client.say(channel, `Nobody guessed correctly!`);
+        } else if (this.headsGuesses.length === 0 || this.tails.length === 0) {
+            twitchbot.client.say(channel, `Everybody guessed correctly!`);
+            twitchbot.client.say(channel, `@${correctGuesses[0]} was the first winner!`);
         } else {
-            if(this.tails.length === 0) {
-                this.client.say(`Nobody guessed correctly!`);
-                return;
-            } else if(this.heads.length === 0) {
-                this.client.say(`Everybody guessed correctly!`);
-                this.client.say(`@${tails[0]} was the first winner!`);
-                return;
-            } else {
-                this.client.say(`The following people guessed correctly: ${tails}`);
-                this.client.say(`@${tails[0]} was the first winner!`);
-                this.client.say(`@${heads[0]} is the biggest loser!`);
-            }            
+            twitchbot.client.say(channel, `The following people guessed correctly: ${correctGuesses.join(', ')}`);
+            twitchbot.client.say(channel, `@${correctGuesses[0]} was the first winner!`);
+            if(incorrectGuesses.length > 0) {
+                twitchbot.client.say(channel, `@${incorrectGuesses[0]} is the biggest loser!`);
+            }
+            
         }
     }
 }

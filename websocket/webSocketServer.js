@@ -45,7 +45,7 @@ class WebSocketServer {
     }
 
     async onMessage(message) {
-        console.log('Received: ' + message);
+        
         const parsedMessage = JSON.parse(message);
         switch (parsedMessage.type) {
             case 'getInfo':
@@ -67,14 +67,14 @@ class WebSocketServer {
                 break;
             case 'startBot':
                 try {
-                    this.twitchBotClient.connect();
+                    await this.twitchBotClient.connect();                    
                 } catch (error) {
                     console.log(error);
                 }
                 break;
             case 'stopBot':
                 try {
-                    this.twitchBotClient.disconnect();
+                    await this.twitchBotClient.disconnect();
                 } catch (error) {
                     console.log(error);
                 }
