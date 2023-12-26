@@ -1,7 +1,7 @@
 const Command = require('./command.js');
 
 class CoinFlipCommand extends Command {
-    constructor() {
+    constructor(db, wss) {
         super();  
         this.flipping = false;
         this.headsGuesses = [];
@@ -16,6 +16,10 @@ class CoinFlipCommand extends Command {
         this.execute = this.flip;
         this.heads = this.guess;
         this.tails = this.guess;
+        this.headsBets = [];
+        this.tailsBets = [];
+        this.db = db;
+        this.wss = wss;
     }
    
 
@@ -47,9 +51,22 @@ class CoinFlipCommand extends Command {
         }, 2000);
     }
 
-    guess(twitchbot, channel, args, userstate) {
+    async guess(twitchbot, channel, args, userstate) {
         try {
             const side = args[0].toLowerCase().substring(1);
+            const bet = args[1] ? args[1] : 0;
+            console.log(bet);
+            
+            const points = await this.db.getPoints(userstate.username);
+            console.log(points);
+            if (points < bet) {
+                twitchbot.client.say(channel, `@${userstate.username} you don't have enough points!`);
+                return;
+            } else if (bet < 0) {
+                twitchbot.client.say(channel, `@${userstate.username} you can't bet negative points!`);
+                return;
+            }
+
             if (this.flipping) {
                 const username = userstate.username;
                 if (this.headsGuesses.includes(username) || this.tailsGuesses.includes(username)) {
@@ -57,9 +74,11 @@ class CoinFlipCommand extends Command {
                 } else {
                     if (side === 'heads') {
                         this.headsGuesses.push(username);
+                        this.headsBets.push(bet);
                         twitchbot.client.say(channel, `@${username} has guessed ${side}!`);
                     } else if (side === 'tails') {
                         this.tailsGuesses.push(username);
+                        this.tailsBets.push(bet);
                         twitchbot.client.say(channel, `@${username} has guessed ${side}!`);
                     } else {
                         twitchbot.client.say(channel, `@${username} you must guess either heads or tails!`);
@@ -83,6 +102,7 @@ class CoinFlipCommand extends Command {
         } else if (this.headsGuesses.length === 0 || this.tails.length === 0) {
             twitchbot.client.say(channel, `Everybody guessed correctly!`);
             twitchbot.client.say(channel, `@${correctGuesses[0]} was the first winner!`);
+            
         } else {
             twitchbot.client.say(channel, `The following people guessed correctly: ${correctGuesses.join(', ')}`);
             twitchbot.client.say(channel, `@${correctGuesses[0]} was the first winner!`);
@@ -91,6 +111,35 @@ class CoinFlipCommand extends Command {
             }
             
         }
+
+        correctGuesses.forEach((guess, index) => {
+                if(this.winningCoin === 'heads') {
+                    this.db.addPoints(guess, this.headsBets[index]);
+                } else {
+                    this.db.addPoints(guess, this.tailsBets[index]);
+                }
+            });
+
+        incorrectGuesses.forEach((guess, index) => {
+            if(this.winningCoin === 'heads') {
+                this.db.addPoints(guess, 0 - this.tailsBets[index]);
+            } else {
+                this.db.addPoints(guess, 0 - this.headsBets[index]);
+            }
+        });
+
+        let headsGuessesStr = '';
+        let tailsGuessesStr = '';
+        
+        this.headsGuesses.forEach(guess => {
+            headsGuessesStr += guess + ',';
+        });
+
+        this.tailsGuesses.forEach(guess => {
+            tailsGuessesStr += guess + ',';
+        });        
+
+        this.db.addCoinFlip(true, this.winningCoin, headsGuessesStr, tailsGuessesStr, correctGuesses[0], incorrectGuesses[0]);
     }
 }
 

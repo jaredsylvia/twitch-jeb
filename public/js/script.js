@@ -1,12 +1,19 @@
 $(document).ready(() => {
     const ws = new WebSocket('ws://localhost:3000');
-
+    const refresh_token = document.cookie.split('; ').find(row => row.startsWith('twitchRefreshToken')).split('=')[1];
+    const oauth_token = document.cookie.split('; ').find(row => row.startsWith('twitchOAuthToken')).split('=')[1];
+    let expiry = document.cookie.split('; ').find(row => row.startsWith('twitchExpiry')).split('=')[1];
+    const hackerTextElement = $('#hacker-text');
+    
+    
     ws.onerror = (event) => {
         console.error('WebSocket error:', event);
     };
 
     ws.onopen = () => {
         console.log('WebSocket client connected');
+        ws.send(JSON.stringify({ type : 'startBot' }));
+        ws.send(JSON.stringify({ type : 'getInfo' }));
     };
 
     ws.onmessage = (event) => {
@@ -88,17 +95,41 @@ $(document).ready(() => {
                 // Extract relevant information from message
                 let game = message.channelData.data[0].game_name;
                 let title = message.channelData.data[0].title;
-                let viewers = (message.streamData && message.streamdata.data && message.streamdata.data[0].viewer_count) ?? 0;
+                let viewers = (message.streamData && message.streamData.data && message.streamData.data[0].viewer_count) ?? 0;
                 let followers = message.followerCount ?? 0;
-                              
-
+                let koth = message.kothData;
+                let roulette = message.rouletteData;
+                let coinflip = message.coinflipData;
+                let goals = message.goals;
+                let mostRecentFollower = message.mostRecentFollower;
+                let mostRecentSubscriber = message.mostRecentSubscriber;
+                let mostRecentViewer = message.mostRecentViewer;
+                console.log(message);
                 // Update information on page
                 $('#game').text(game);
                 $('#title').text(title);
                 $('#viewers').text(viewers);
                 $('#followers').text(followers);
-
-
+                $('#koth').text(koth.kothWinner);
+                $('#roulette').text(roulette.rouletteWinner);
+                $('#coinflip').text(coinflip.firstWinner);
+                $('#goal1').text(goals[0]);
+                $('#goal2').text(goals[1]);
+                $('#goal3').text(goals[2]);
+                $('#goal4').text(goals[3]);
+                $('#mostRecentFollower').text(mostRecentFollower.username);
+                $('#mostRecentSubscriber').text(mostRecentSubscriber.username);
+                $('#mostRecentViewer').text(mostRecentViewer.username);
+                
+                break;
+            case 'refreshOauth':
+                console.log(message);
+                expiry = message.token.expires_in;
+                document.cookie = `twitchRefreshToken=${message.token.refresh_token}; SameSite=Strict`;
+                document.cookie = `twitchOAuthToken=${message.token.access_token}; SameSite=Strict`;
+                document.cookie = `twitchExpiry=${message.token.expires_in}; SameSite=Strict`;
+                
+                break;
             default:
                 
                 break;
@@ -107,6 +138,7 @@ $(document).ready(() => {
     // Set update button to send getInfo message
     $('#update').click(() => {
         ws.send(JSON.stringify({ type : 'getInfo' }));
+        
     });
 
     $('#startBot').click(() => {
@@ -117,14 +149,34 @@ $(document).ready(() => {
         ws.send(JSON.stringify({ type : 'stopBot' }));
     });
 
-    // Update information every 5 seconds
+    $('#sendAlert').click(() => {
+        let alertText = $('#alertText').val();
+        console.log($('#alertText'));
+        console.log(alertText);
+        ws.send(JSON.stringify({ type : 'alert', message: alertText }));
+    });
+
+    $(window).on('beforeunload', () => {
+        ws.close();
+    });
+    
     setInterval(() => {
         ws.send(JSON.stringify({ type : 'getInfo' }));
-    }, 500000);
-    
-    // Reload page every 20 minutes
+    }, 5000);
+
     setInterval(() => {
-        location.reload(true);
-    }, 1200000);
+    expiry = expiry - 1;
+        if(expiry % 5 === 0 ) {
+            document.cookie = `twitchExpiry=${expiry}; SameSite=Strict`;
+        }
+        
+        if (expiry <= 60) {
+            ws.send(JSON.stringify({ type : 'refreshOauth', token: refresh_token }));
+        }       
+    }, 1000);
+
+    setInterval (() => {
+        ws.send(JSON.stringify({ type : 'updateUserInformation' }));
+    }, 60000);
 
 });

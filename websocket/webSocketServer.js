@@ -1,22 +1,25 @@
 const WebSocket = require('ws');
-const twitchApi = require('../twitch/twitchApi.js');
+const TwitchApi = require('../twitch/twitchApi.js');
 
 class WebSocketServer {
-    constructor(server, twitchClientId, twitchOauthToken, twitchChannel, twitchUserID) {
+    constructor(server, twitchClientId, twitchOauthToken, twitchRefreshToken, twitchChannel, twitchUserID, db) {
         this.server = server;
         this.twitchClientId = twitchClientId;
         this.twitchOauthToken = twitchOauthToken;
+        this.twitchRefreshToken = twitchRefreshToken;
         this.twitchChannel = twitchChannel;
-        this.twitchUserID = twitchUserID;
+        this.twitchUserID = twitchUserID;        
         this.wss = new WebSocket.Server({ server });
+        this.twitchApiClient = new TwitchApi(twitchOauthToken, null, twitchUserID);
+        this.db = db;
     }
 
-    setupWebSocketServer() {
+    async setupWebSocketServer() {
         this.wss.on('listening', this.onListening.bind(this));
         this.wss.on('connection', this.onConnection.bind(this));
     }
 
-    sendToWebSocket(data) {
+    async sendToWebSocket(data) {
         this.wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify(data));
@@ -24,21 +27,25 @@ class WebSocketServer {
         });
     }
 
-    updateTwitchInfo(twitchClientId, twitchOauthToken, twitchChannel) {
+    async updateTwitchInfo(twitchClientId, twitchOauthToken, twitchRefreshToken, twitchChannel) {
         this.twitchClientId = twitchClientId;
         this.twitchOauthToken = twitchOauthToken;
+        this.twitchRefreshToken = twitchRefreshToken;
         this.twitchChannel = twitchChannel;
+        this.twitchApiClient.setOauthToken(twitchOauthToken);
+        this.twitchApiClient.setRefreshToken(twitchRefreshToken);
+        
     }
 
-    setTwitchBot(twitchBotClient) {
+    async setTwitchBot(twitchBotClient) {
         this.twitchBotClient = twitchBotClient;
     }
 
-    onListening() {
+    async onListening() {
         console.log(`WebSocket server started and listening.`);
     }
 
-    onConnection(ws) {
+    async onConnection(ws) {
         console.log('WebSocket client connected');
         ws.on('message', this.onMessage.bind(this));
         ws.on('close', this.onClose.bind(this));
@@ -50,17 +57,51 @@ class WebSocketServer {
         switch (parsedMessage.type) {
             case 'getInfo':
                 try {
-                    const streamData = await twitchApi.getStreamData(this.twitchClientId, this.twitchOauthToken, this.twitchUserID);
-                    const channelData = await twitchApi.getChannelData(this.twitchClientId, this.twitchOauthToken, this.twitchUserID);
-                    const followerCount = await twitchApi.getFollowerCount(this.twitchClientId, this.twitchOauthToken, this.twitchUserID);
-
+                    const streamData = await this.twitchApiClient.getStreamData();
+                    const channelData = await this.twitchApiClient.getChannelData();
+                    const followerCount = await this.twitchApiClient.getFollowerCount();
+                    const kothData = await this.db.getKOTH();
+                    const rouletteData = await this.db.getRoulette();
+                    const coinflipData = await this.db.getCoinflip();
+                    const goals = [
+                        await this.db.getGoal('follow'),
+                        await this.db.getGoal('sub'),
+                        await this.db.getGoal('bits'),
+                        await this.db.getGoal('dono')
+                    ]
+                    const mostRecentFollower = await this.db.getMostRecentFollower();
+                    const mostRecentSubscriber = await this.db.getMostRecentSubscriber();
+                    const mostRecentViewer = await this.db.getMostRecentViewer();
+                    
                     const data = {
                         type: 'info',
                         streamData,
                         channelData,
-                        followerCount
+                        followerCount,
+                        kothData,
+                        rouletteData,
+                        coinflipData,
+                        goals,                        
+                        mostRecentFollower,
+                        mostRecentSubscriber,
+                        mostRecentViewer
                     };
+                    
                     this.sendToWebSocket(data);
+                } catch (error) {
+                    console.log(error);
+                }
+                break;
+            case 'updateUserInformation':
+                try {
+                    // get all users viewing the stream
+                    const viewers = await this.db.getAllViewers();
+                    for (const viewer of viewers) {
+                        
+                        // add points to each viewer
+                        await this.db.addPoints(viewer.username, 10);
+                        
+                    }
                 } catch (error) {
                     console.log(error);
                 }
@@ -81,7 +122,7 @@ class WebSocketServer {
                 break;
             case 'message':
                 try {
-                    this.wss.sendToWebSocket({
+                    this.sendToWebSocket({
                         type: 'message',
                         message: parsedMessage.message
                     });
@@ -89,13 +130,47 @@ class WebSocketServer {
                     console.log(error);
                 }
                 break;
-
+            case 'refreshOauth':
+                try {
+                    console.log(parsedMessage);
+                    
+                    var data = await this.twitchApiClient.renewOauth(parsedMessage.token);
+                    this.twitchOauthToken = data.access_token;
+                    this.twitchBotClient.oauthToken(data.access_token);
+                    this.sendToWebSocket({
+                        type: 'refreshOauth',
+                        token: data
+                    });
+                    console.log(data);
+                } catch (error) {
+                    console.log(error);
+                }
+                break;
+            case 'alert':
+                try {
+                    console.log(parsedMessage);
+                    this.sendToWebSocket({
+                        type: 'alert',
+                        message: parsedMessage.message
+                    });
+                } catch (error) {
+                    console.log(error);
+                }
+                break;
         }
 
     }
 
-    onClose() {
+    async onClose() {
         console.log('WebSocket client disconnected');
+        // try {
+        //     await this.twitchBotClient.disconnect();
+        // } catch (error) {
+        //     if(error instanceof TypeError) {
+        //         console.log('WS client doesn\'t control a bot');
+        //     }
+        //     console.log(error);
+        // }
     }
 }
 

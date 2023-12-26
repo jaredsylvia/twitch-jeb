@@ -4,7 +4,6 @@ class StandardCommands {
     constructor() {
         this.slap = new Command('Trout Slapper', 'Slaps a user with a large trout.', ['slap', 'trout'], '!slap <user>', 5, this.executeSlap);
         this.hug = new Command('Hug Attack', 'Hugs a user.', ['hug', 'hugs'], '!hug <user>', 5, this.executeHug);
-        this.kick = new Command('Big Boot', 'Kicks a user from the channel.', ['kick'], '!kick <user>', 5, this.executeKick);
         this.ban = new Command('Ban Hammer', 'Bans a user from the channel.', ['ban'], '!ban <user>', 5, this.executeBan);
         this.timeout = new Command('Corner Sitter', 'Times out a user for 10 minutes.', ['timeout', 'mute'], '!timeout <user>', 5, this.executeTimeout);
     }
@@ -17,17 +16,14 @@ class StandardCommands {
         twitchbot.client.say(channel, `@${userstate.username} hugs ${args[1]}!`);
     }
 
-    executeKick(twitchbot, channel, args, userstate) {
-        if(this.kick.checkIfMod(userstate)) {
-            twitchbot.client.say(channel, `@${userstate.username} has been kicked!`);
-            twitchbot.client.timeout(channel, args[1], 1);
-        }
-    }
-
     executeBan(twitchbot, channel, args, userstate) {
-        if(this.ban.checkIfMod(userstate)) {
-            twitchbot.client.say(channel, `@${userstate.username} has been banned!`);
-            twitchbot.client.ban(channel, args[1]);
+        if(userstate.mod || userstate.badges.broadcaster === '1') {
+            twitchbot.client.ban(channel, args[1]).then(function() {
+                twitchbot.client.say(channel, `@${args[1]} has been banned!`);
+            }, function(err) {
+                twitchbot.client.say(channel, `@${args[1]} could not be banned!`);
+                console.log(err);
+            });            
         }        
     }
 
@@ -59,7 +55,7 @@ class StandardCommands {
     }
 
     getAllCommands() {
-        return [this.slap, this.hug, this.kick, this.ban, this.timeout];
+        return [this.slap, this.hug, this.ban, this.timeout];
     }
 }
 

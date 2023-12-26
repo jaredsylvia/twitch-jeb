@@ -1,13 +1,15 @@
 
 class Command {
-    constructor(name, description, aliases, usage, cooldown, execute, subcommands) {
+    constructor(name, description, aliases, usage, cooldown, execute, subcommands, wss, db) {
         this.name = name;
         this.description = description;
         this.aliases = aliases;
         this.usage = usage;
         this.cooldown = cooldown;
         this.execute = execute;
-        this.subcommands = subcommands; 
+        this.subcommands = subcommands;
+        this.wss = wss;
+        this.db = db;
     }
 
     checkIfMod(userstate) {
@@ -22,7 +24,6 @@ class Command {
         const messageArray = message.split(' ');
         const command = messageArray.shift().toLowerCase();
         const args = messageArray;
-3
         return {
             command,
             args

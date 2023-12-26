@@ -1,7 +1,11 @@
 // Load the things we need
 require('dotenv').config();
 const TwitchBot = require('./twitch/twitchBot.js');
+
 const WebSocketServer = require('./websocket/webSocketServer.js');
+const Database = require('./db/db.js');
+
+
 const express = require('express');
 const fetch = require('node-fetch');
 const cookieParser = require('cookie-parser');
@@ -19,11 +23,19 @@ const twitchUserID = process.env.TWITCH_USERID;
 const serverIp = process.env.SERVER_IP;
 const serverPort = process.env.SERVER_PORT || 3000;
 const serverBaseUrl = process.env.SERVER_BASE_URL;
+const dbPath = process.env.DB_PATH;
 
 // Define configuration options for Twitch bot
 const twitchTokenUrl = 'https://id.twitch.tv/oauth2/token';
 let twitchOAuthToken;
+let twitchRefreshToken;
 let twitchBotClient;
+
+// Connect to database
+let db = new Database(dbPath);
+
+// Create tables if they don't exist
+db.createTables();
 
 // Create an Express app
 const app = express();
@@ -39,45 +51,20 @@ app.set('view engine', 'ejs');
 const server = app.listen(serverPort, serverIp, () => {
     console.log(`Server listening on ${serverIp}:${serverPort}`);
     console.log(`Base URL: ${serverBaseUrl}`);
+    console.log(`Twitch username: ${twitchUsername}`);
+    console.log(`Twitch channel: ${twitchChannel}`);
+    console.log(`Twitch user ID: ${twitchUserID}`);
+    console.log(`Server IP: ${serverIp}`);
+    console.log(`Database path: ${dbPath}`);
 });
 
 // Start the websocket server
-let wss = new WebSocketServer(server, twitchClientId, twitchOAuthToken, twitchChannel, twitchUserID);
-async function startWebSocketServer() {
-    await wss.setupWebSocketServer();
-}
-startWebSocketServer ();
+let wss = new WebSocketServer(server, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel, twitchUserID, db);
+wss.setupWebSocketServer();
 
 // Define a route for the home page
 app.get('/', (req, res) => {
-    const twitchRefreshToken = req.cookies?.twitchRefreshToken;
-   
-    if (twitchRefreshToken) {
-        const twitchTokenParams = new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: twitchRefreshToken,
-        client_id: twitchClientId,
-        client_secret: twitchSecret
-        });
-
-        fetch(twitchTokenUrl, {
-            method: 'POST',
-            body: twitchTokenParams
-          }).then((response) => {
-            return response.json();
-          }).then((data) => {
-            twitchOAuthToken = data.access_token;
-            res.cookie('twitchOAuthToken', data.access_token);
-            res.cookie('twitchRefreshToken', data.refresh_token);
-            
-            res.redirect('/dashboard');
-          }).catch((error) => {
-            console.error('Error refreshing access token:', error);
-            res.redirect('/auth/twitch');
-          });
-        } else {
-          res.redirect('/dashboard');
-        }    
+          res.render('index', { twitchUsername });
 });
 
 // Define a route for the Twitch OAuth flow
@@ -111,26 +98,41 @@ app.get('/auth/twitch/callback', async (req, res) => {
     twitchOAuthToken = data.access_token;
 
     // Store the OAuth token in a cookie or session
-    res.cookie('twitchOAuthToken', data.access_token);
-    res.cookie('twitchRefreshToken', data.refresh_token);
+    res.cookie('twitchOAuthToken', data.access_token, { sameSite: 'Strict' });
+    res.cookie('twitchRefreshToken', data.refresh_token, { sameSite: 'Strict' });
+    res.cookie('twitchExpiry', data.expires_in, { sameSite: 'Strict' });       
     
-    // Define configuration options for Twitch bot
-
     // Redirect to the home page
-    res.redirect('/dashboard');
+    res.redirect('/');
+});
+
+// Define a route for the logout page
+app.get('/logout', (req, res) => {
+    res.clearCookie('twitchOAuthToken');
+    res.clearCookie('twitchRefreshToken');
+    res.clearCookie('twitchExpiry');
+    res.redirect('/');
 });
 
 // Define a route for the dashboard page
 app.get('/dashboard', (req, res) => {
     const twitchOAuthToken = req.cookies?.twitchOAuthToken;
+    const twitchRefreshToken = req.cookies?.twitchRefreshToken;
         
     if (twitchOAuthToken) {
         res.render('dashboard', { twitchUsername });
-        twitchBotClient = new TwitchBot(twitchUsername, twitchOAuthToken, twitchChannel, wss);
+        console.log(`Twitch username: ${twitchUsername}`);
+        twitchBotClient = new TwitchBot(twitchUsername, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchUserID, twitchChannel, wss, db);
         wss.setTwitchBot(twitchBotClient);
-        wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchChannel);
+        wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel);
+        twitchBotClient.setupCommands();
         
     } else {
         res.redirect('/auth/twitch');
     }
+});
+
+// Define a route for overlay page
+app.get('/overlay', (req, res) => {
+    res.render('overlay', { twitchUsername });      
 });

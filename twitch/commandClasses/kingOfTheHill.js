@@ -1,19 +1,21 @@
 const Command = require('./command.js');
 
 class KingOfTheHill extends Command {
-    constructor() {
+    constructor(db, wss) {
         super();
         this.name = 'King Of The Hill';
         this.aliases = ['koth'];
         this.cooldown = 5;
         this.description = 'Starts a king of the hill game.';
-        this.usage = '!koth starts a king of the hill game, !join joins the game.';
-        this.subcommands = ['join'];
+        this.usage = '!koth starts a king of the hill game, !joink joins the game.';
+        this.subcommands = ['joink'];
         this.kothActive = false;
         this.kothPlayers = [];
         this.kothWinner = '';
         this.execute = this.startKoth;
-        this.join = this.join;
+        this.joink = this.join;
+        this.db = db;
+        this.wss = wss;
     }
 
     startKoth(twitchbot, channel, args, userstate) {
@@ -26,8 +28,12 @@ class KingOfTheHill extends Command {
             this.kothActive = true;
             this.kothPlayers = [];
             this.kothWinner = '';
-
-            twitchbot.client.say(channel, `A king of the hill game has started! Type !join to join the game.`);
+            const data = {
+                type: 'koth',
+                active: this.kothActive,
+            }
+            this.wss.sendToWebSocket(data);
+            twitchbot.client.say(channel, `A king of the hill game has started! Type !joink to join the game.`);
 
             setTimeout(() => {
                 if (this.kothPlayers.length === 0) {
@@ -41,8 +47,22 @@ class KingOfTheHill extends Command {
 
                 twitchbot.client.say(channel, `The winner is ${winner}!`);
                 this.kothActive = false;
+                const data = {
+                    type: 'koth',
+                    active: this.kothActive,
+                    winner: this.kothWinner
+                }
+                this.wss.sendToWebSocket(data);
+                
+                this.kothPlayerNames = '';
+                this.kothPlayers.forEach(player => {
+                    this.kothPlayerNames += player + ',';
+                });         
+
+                this.db.addKOTH(this.kothActive, this.kothPlayerNames, this.kothWinner)
             }, 30000);
         } catch (err) {
+            console.log(err);
             twitchbot.client.say(channel, `${this.name}: ${this.description}`);
             twitchbot.client.say(channel, `Usage: ${this.usage}`);
         }
@@ -63,6 +83,12 @@ class KingOfTheHill extends Command {
 
             this.kothPlayers.push(userstate.username);
             twitchbot.client.say(channel, `${userstate.username} has joined the game!`);
+            const data = {
+                type: 'koth',
+                active: this.kothActive,
+                players: this.kothPlayers
+            }
+            this.wss.sendToWebSocket(data);
         } catch (err) {
             twitchbot.client.say(channel, `${this.name}: ${this.description}`);
             twitchbot.client.say(channel, `Usage: ${this.usage}`);
