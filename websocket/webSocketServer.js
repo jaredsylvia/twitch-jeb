@@ -132,16 +132,14 @@ class WebSocketServer {
                 break;
             case 'refreshOauth':
                 try {
-                    console.log(parsedMessage);
-                    
                     var data = await this.twitchApiClient.renewOauth(parsedMessage.token);
                     this.twitchOauthToken = data.access_token;
+                    this.twitchApiClient.setOauthToken(data.access_token);
                     this.twitchBotClient.updateOauthToken(data.access_token);
                     this.sendToWebSocket({
                         type: 'refreshOauth',
                         token: data
                     });
-                    console.log(data);
                 } catch (error) {
                     console.log(error);
                 }

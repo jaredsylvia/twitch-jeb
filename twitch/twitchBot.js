@@ -38,10 +38,6 @@ class TwitchBot {
         this.twitchApiClient = new TwitchApi(twitchOauthToken, null, twitchUserID);
         this.commands = [];
 
-        console.log(`Client ID: ${this.twitchClientId}`);
-        console.log(`User ID: ${this.userID}`);
-        console.log(`Channel: ${this.channel}`);
-
         this.onTwitchBotConnectedHandler = this.onTwitchBotConnectedHandler.bind(this);
         this.onTwitchBotDisconnectedHandler = this.onTwitchBotDisconnectedHandler.bind(this);
         

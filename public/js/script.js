@@ -12,7 +12,7 @@ $(document).ready(() => {
 
     ws.onopen = () => {
         console.log('WebSocket client connected');
-        ws.send(JSON.stringify({ type : 'startBot' }));
+        //ws.send(JSON.stringify({ type : 'startBot' }));
         ws.send(JSON.stringify({ type : 'getInfo' }));
     };
 
@@ -49,7 +49,7 @@ $(document).ready(() => {
                 let joinUsername = message.username;
 
                 //Check number of <li> tags in <ul> with id="users"
-                if ($('#recentJoined li').length >= 10) {
+                if ($('#recentJoined li').length >= 3) {
                     //Remove first <li> tag in <ul> with id="users"
                     $('#recentJoined li:first').remove();
                 }
@@ -66,7 +66,7 @@ $(document).ready(() => {
                 let followUsername = message.username;
                 
                 // Check number of <li> tags in <ul> with id="users"
-                if ($('#recentFollowed li').length >= 10) {
+                if ($('#recentFollowed li').length >= 3) {
                     // Remove first <li> tag in <ul> with id="users"
                     $('#recentFollowed li:first').remove();
                 }
@@ -157,7 +157,7 @@ $(document).ready(() => {
     });
 
     $(window).on('beforeunload', () => {
-        ws.close();
+        //ws.close();
     });
     
     setInterval(() => {
@@ -165,11 +165,8 @@ $(document).ready(() => {
     }, 5000);
 
     setInterval(() => {
-    expiry = expiry - 1;
-        if(expiry % 5 === 0 ) {
-            document.cookie = `twitchExpiry=${expiry}; SameSite=Strict`;
-        }
-        
+        expiry = document.cookie.split('; ').find(row => row.startsWith('twitchExpiry')).split('=')[1] - 1;
+        document.cookie = `twitchExpiry=${expiry}; SameSite=Strict`;
         if (expiry <= 60) {
             ws.send(JSON.stringify({ type : 'refreshOauth', token: refresh_token }));
         }       

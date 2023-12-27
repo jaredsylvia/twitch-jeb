@@ -21,8 +21,20 @@ const twitchClientId = process.env.TWITCH_CLIENT_ID;
 const twitchSecret = process.env.TWITCH_SECRET;
 const twitchUserID = process.env.TWITCH_USERID;
 const serverIp = process.env.SERVER_IP;
+const serverHost = process.env.SERVER_HOST;
 const serverPort = process.env.SERVER_PORT || 3000;
-const serverBaseUrl = process.env.SERVER_BASE_URL;
+const serverProxied = (process.env.SERVER_PROXIED === "true");
+
+// Define the base URL for the server
+// If proxied, use the serverHost variable, no port, and https
+// Otherwise, use the serverIp variable, port, and http
+let serverBaseUrl;
+if (serverProxied) {
+    serverBaseUrl = `https://${serverHost}`;
+    } else {
+    serverBaseUrl = `http://${serverIp}:${serverPort}`;
+}
+
 const dbPath = process.env.DB_PATH;
 
 // Define configuration options for Twitch bot
@@ -69,7 +81,7 @@ app.get('/', (req, res) => {
 
 // Define a route for the Twitch OAuth flow
 app.get('/auth/twitch', (req, res) => {
-    const redirectUri = `https://${serverBaseUrl}/auth/twitch/callback`;
+    const redirectUri = `${serverBaseUrl}/auth/twitch/callback`;
     const scope = 'channel:moderate+chat:edit+chat:read';
 
     const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
@@ -86,7 +98,7 @@ app.get('/auth/twitch/callback', async (req, res) => {
     params.append('client_secret', twitchSecret);
     params.append('code', code);
     params.append('grant_type', 'authorization_code');
-    params.append('redirect_uri', `https://${serverBaseUrl}/auth/twitch/callback`);
+    params.append('redirect_uri', `${serverBaseUrl}/auth/twitch/callback`);
 
     const response = await fetch('https://id.twitch.tv/oauth2/token', {
         method: 'POST',
@@ -118,18 +130,18 @@ app.get('/logout', (req, res) => {
 app.get('/dashboard', (req, res) => {
     const twitchOAuthToken = req.cookies?.twitchOAuthToken;
     const twitchRefreshToken = req.cookies?.twitchRefreshToken;
-    try {
-        twitchBotClient.disconnect();
-    } catch (error) {
-        console.log("Twitch bot not running.");
-    }
+    
     if (twitchOAuthToken) {
-        res.render('dashboard', { twitchUsername, serverBaseUrl });
-        console.log(`Twitch username: ${twitchUsername}`);
-        twitchBotClient = new TwitchBot(twitchUsername, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchUserID, twitchChannel, wss, db);
+        if(!twitchBotClient) {
+            twitchBotClient = new TwitchBot(twitchUsername, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchUserID, twitchChannel, wss, db);
+        } else {
+            twitchBotClient.updateOauthToken(twitchOAuthToken);
+        }
         wss.setTwitchBot(twitchBotClient);
         wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel);
         twitchBotClient.setupCommands();
+
+        res.render('dashboard', { twitchUsername, serverBaseUrl });
         
     } else {
         res.redirect('/auth/twitch');
