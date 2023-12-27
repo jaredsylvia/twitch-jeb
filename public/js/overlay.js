@@ -1,6 +1,7 @@
 $(document).ready(() => {
     const ws = new WebSocket(`${webSocketAddress}`);
     const hackerTextElement = $('#hacker-text');
+    let followerGoal;
     
     ws.onerror = (event) => {
         console.error('WebSocket error:', event);
