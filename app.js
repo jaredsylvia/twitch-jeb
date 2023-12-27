@@ -141,7 +141,7 @@ app.get('/dashboard', (req, res) => {
         wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel);
         twitchBotClient.setupCommands();
 
-        res.render('dashboard', { twitchUsername, serverBaseUrl });
+        res.render('dashboard', { twitchChannel, serverHost });
         
     } else {
         res.redirect('/auth/twitch');
