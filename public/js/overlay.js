@@ -2,11 +2,6 @@ $(document).ready(() => {
     const ws = new WebSocket(`${webSocketAddress}`);
     const hackerTextElement = $('#hacker-text');
     
-    const queryString = window.location.search;
-    const urlParams = new URLSearchParams(queryString);
-    const followerGoal = urlParams.get('followGoal') ?? 100;
-    
-
     ws.onerror = (event) => {
         console.error('WebSocket error:', event);
     };

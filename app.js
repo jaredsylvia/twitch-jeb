@@ -113,9 +113,9 @@ app.get('/auth/twitch/callback', async (req, res) => {
     twitchOAuthToken = data.access_token;
 
     // Store the OAuth token in a cookie or session
-    res.cookie('twitchOAuthToken', data.access_token, { sameSite: 'Strict' });
-    res.cookie('twitchRefreshToken', data.refresh_token, { sameSite: 'Strict' });
-    res.cookie('twitchExpiry', data.expires_in, { sameSite: 'Strict' });       
+    res.cookie('twitchOAuthToken', data.access_token, { sameSite: 'Strict', httpOnly: false });
+    res.cookie('twitchRefreshToken', data.refresh_token, { sameSite: 'Strict', httpOnly: false });
+    res.cookie('twitchExpiry', data.expires_in, { sameSite: 'Strict', httpOnly: false });       
     console.log(data);
     // Redirect to the home page
     res.redirect('/');
