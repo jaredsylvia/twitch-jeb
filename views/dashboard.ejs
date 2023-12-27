@@ -15,73 +15,89 @@
 </head>
 
 <body>
-
 	<div class="container-fluid">
 		<div class="row">
 			<div class="col-md-12">
-				<% if (twitchUsername) { %>
-					<p>Logged in as <%= twitchUsername %>
-					</p>
-					<button type="button" class="btn btn-primary" id="update">Update</button><button type="button" class="btn btn-primary" id="startBot">Start Bot</button><button type="button" class="btn btn-primary" id="stopBot">Stop Bot</button>
-					<p><a href="/logout">Logout</a></p>
-					<% } else { %>
-					<p><a href="/auth/twitch">Login with Twitch</a></p>
-				<% } %>
-			        <input type="text" id="alertText" name="alertText" placeholder="Alert" value="alert">
-					<button type="button" class="btn btn-primary" id="sendAlert">Send Alert</button>
-			
-					<div class="row mainBody" >
-						<div class="col-md-6">
-							<div class="row">
-								<div class="col-md-6 followers">
-									Followers: <p id="followers"></p>
-								</div>
-								<div class="col-md-6 viewers">
-									Viewers: <p id="viewers"></p>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-md-6 channelInfo">
-									Game: <p id="game"></p>
-									Stream: <p id="title"></p>
-								</div>
-								<div class="col-md-6 recentUsers">
-									Recently Joined: 
-									<ul id="recentJoined">
-									
-									</ul>
-									Recently Followed:
-									<ul id="recentFollowed">
-									</ul>
-									Current KoTH:
-									<ul id="koth">
-									</ul>
-									Last Roulette Winner:
-									<ul id="roulette">
-									</ul>
-									Last Coinflip Winner:
-									<ul id="coinflip">
-									</ul>									
-								</div>
-							</div>
-						</div>
-						<div class="col-md-6 chat">
-							Chat messages here.
-							<div id="messages">
-								
-							</div>
-						
-						</div>
+				<div class="row">
+					<div class="col-md-4">
+						<% if (twitchUsername) { %>
+							<p>Logged in as <%= twitchUsername %>
+							</p>
+							<button type="button" class="btn btn-primary" id="update">Update</button><button type="button" class="btn btn-primary" id="startBot">Start Bot</button><button type="button" class="btn btn-primary" id="stopBot">Stop Bot</button>
+							<p><a href="/logout">Logout</a></p>
+							<% } else { %>
+							<p><a href="/auth/twitch">Login with Twitch</a></p>
+						<% } %>
 					</div>
-					
-					<div class="row alertArea">
-						<div class="col-md-12 alert" id="alert">
-							Alerts go here
-						</div>
+					<div class="col-md-4">
+						<input type="text" id="alertText" name="alertText" placeholder="Alert" value="alert">
+						<button type="button" class="btn btn-primary" id="sendAlert">Send Alert</button>
 					</div>
+					<div class="col-md-4">
+						<div class="col-md-6 followers">
+							Followers: <p id="followers"></p>
+						</div>
+						<div class="col-md-6 viewers">
+							Viewers: <p id="viewers"></p>
+						</div>						
+					</div>
+				</div>
 			</div>
 		</div>
-	</div>
+		<div class="row">
+			<div class="col-md-2">
+				<div class="col-md-6 recentUsers">
+					Recently Joined: 
+					<ul id="recentJoined">
+					
+					</ul>
+					Recently Followed:
+					<ul id="recentFollowed">
+					</ul>
+					Current KoTH:
+					<ul id="koth">
+					</ul>
+					Last Roulette Winner:
+					<ul id="roulette">
+					</ul>
+					Last Coinflip Winner:
+					<ul id="coinflip">
+					</ul>									
+				</div>
+				<div class="col-md-6 channelInfo">
+					Game: <p id="game"></p>
+					Stream: <p id="title"></p>
+				</div>
+
+			</div>
+			<div class="col-md-8">
+				<iframe
+					src="https://player.twitch.tv/?joeerror&parent=twitchbot.joeerror.com"
+					height="100%"
+					width="100%"
+					allowfullscreen>
+				</iframe>
+
+			</div>
+			<div class="col-md-2">
+				<div id="messages">
+								
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<div class="row">
+					<div class="col-md-4">
+					</div>
+					<div class="col-md-4">
+					</div>
+					<div class="col-md-4">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>	
 
 	<script src="https://code.jquery.com/jquery-3.7.1.js"
 		integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>

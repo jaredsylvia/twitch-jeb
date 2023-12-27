@@ -137,7 +137,7 @@ class TwitchBot {
         this.commands.push(new Points(this.db));
         this.commands.push(new Goals(this.db));
         this.commands.push(new Disclaimers(this.db));    
-        console.log(this.commands);
+    //  console.log(this.commands);
     }
     
     async onTwichBotMessageHandler (channel, userstate, message, self) {
