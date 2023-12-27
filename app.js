@@ -29,10 +29,13 @@ const serverProxied = (process.env.SERVER_PROXIED === "true");
 // If proxied, use the serverHost variable, no port, and https
 // Otherwise, use the serverIp variable, port, and http
 let serverBaseUrl;
+let webSocketAddress;
 if (serverProxied) {
     serverBaseUrl = `https://${serverHost}`;
+    webSocketAddress = `wss://${serverHost}`;
     } else {
     serverBaseUrl = `http://${serverIp}:${serverPort}`;
+    webSocketAddress = `ws://${serverIp}:${serverPort}`;
 }
 
 const dbPath = process.env.DB_PATH;
@@ -141,7 +144,7 @@ app.get('/dashboard', (req, res) => {
         wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel);
         twitchBotClient.setupCommands();
 
-        res.render('dashboard', { twitchUsername, twitchChannel, serverHost });
+        res.render('dashboard', { twitchUsername, twitchChannel, serverHost, webSocketAddress });
         
     } else {
         res.redirect('/auth/twitch');
@@ -150,5 +153,5 @@ app.get('/dashboard', (req, res) => {
 
 // Define a route for overlay page
 app.get('/overlay', (req, res) => {
-    res.render('overlay', { twitchUsername });      
+    res.render('overlay', { twitchUsername, webSocketAddress });      
 });

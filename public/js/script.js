@@ -1,5 +1,5 @@
 $(document).ready(() => {
-    const ws = new WebSocket('ws://localhost:3000');
+    const ws = new WebSocket(`${webSocketAddress}`);
     const refresh_token = document.cookie.split('; ').find(row => row.startsWith('twitchRefreshToken')).split('=')[1];
     const oauth_token = document.cookie.split('; ').find(row => row.startsWith('twitchOAuthToken')).split('=')[1];
     let expiry = document.cookie.split('; ').find(row => row.startsWith('twitchExpiry')).split('=')[1];

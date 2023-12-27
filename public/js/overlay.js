@@ -1,5 +1,5 @@
 $(document).ready(() => {
-    const ws = new WebSocket('ws://localhost:3000');
+    const ws = new WebSocket(`${webSocketAddress}`);
     const hackerTextElement = $('#hacker-text');
     
     const queryString = window.location.search;
