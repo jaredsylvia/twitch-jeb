@@ -11,6 +11,7 @@ const Quotes = require('./commandClasses/quotes.js');
 const Roulette = require('./commandClasses/roulette.js');
 const Points = require('./commandClasses/points.js');
 const Goals = require('./commandClasses/goals.js');
+const Disclaimers = require('./commandClasses/disclaimers.js');
 const standardCommands = new StandardCommands();
 
 // const commands = [];
@@ -83,7 +84,6 @@ class TwitchBot {
             this.client = null;
         }
         console.log('Connecting to Twitch...');
-        console.log(options);
         this.client = new tmi.client(options);
         
 
@@ -135,7 +135,8 @@ class TwitchBot {
         this.commands.push(new Quotes(this.db, this.wss));
         this.commands.push(new Roulette(this.db, this.wss));
         this.commands.push(new Points(this.db));
-        this.commands.push(new Goals(this.db));        
+        this.commands.push(new Goals(this.db));
+        this.commands.push(new Disclaimers(this.db));    
         console.log(this.commands);
     }
     

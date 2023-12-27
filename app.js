@@ -118,7 +118,11 @@ app.get('/logout', (req, res) => {
 app.get('/dashboard', (req, res) => {
     const twitchOAuthToken = req.cookies?.twitchOAuthToken;
     const twitchRefreshToken = req.cookies?.twitchRefreshToken;
-        
+    try {
+        twitchBotClient.disconnect();
+    } catch (error) {
+        console.log("Twitch bot not running.");
+    }
     if (twitchOAuthToken) {
         res.render('dashboard', { twitchUsername });
         console.log(`Twitch username: ${twitchUsername}`);

@@ -136,7 +136,7 @@ class WebSocketServer {
                     
                     var data = await this.twitchApiClient.renewOauth(parsedMessage.token);
                     this.twitchOauthToken = data.access_token;
-                    this.twitchBotClient.oauthToken(data.access_token);
+                    this.twitchBotClient.updateOauthToken(data.access_token);
                     this.sendToWebSocket({
                         type: 'refreshOauth',
                         token: data
@@ -156,6 +156,16 @@ class WebSocketServer {
                 } catch (error) {
                     console.log(error);
                 }
+                break;
+            case 'disclaimer':
+                try {
+                    var disclaimer = await this.db.getDisclaimer('default');
+                    this.twitchBotClient.client.say(this.twitchChannel, disclaimer.message);
+                } catch (error) {
+                    console.log(error);
+                }
+                break;
+            default:
                 break;
         }
 

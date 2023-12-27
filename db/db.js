@@ -82,6 +82,13 @@ class Database {
             date DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
+        this.db.run(`CREATE TABLE IF NOT EXISTS disclaimers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            message TEXT NOT NULL,
+            date DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
     }
     
     addViewer(username) {
@@ -89,7 +96,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Added viewer ${username} to database.`);
         });
     }
 
@@ -184,7 +190,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated timeout count of ${username} in database.`);
         });
     }
 
@@ -194,7 +199,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated deleted messages of ${username} in database.`);
         });
     }
     
@@ -204,7 +208,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated last seen of ${username} in database.`);
         });
     }
 
@@ -215,7 +218,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated follower status of ${username} in database.`);
         });
     }
 
@@ -226,7 +228,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated subscribed status of ${username} in database.`);
         });
     }
 
@@ -236,7 +237,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated mod status of ${username} in database.`);
         });
     }
 
@@ -246,7 +246,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated VIP status of ${username} in database.`);
         });
     }
 
@@ -256,7 +255,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated broadcaster status of ${username} in database.`);
         });
     }
         
@@ -266,7 +264,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated gifted subs of ${username} in database.`);
         });
     }
 
@@ -276,7 +273,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated points of ${username} in database.`);
         });
     }
 
@@ -298,7 +294,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Updated viewing now of ${username} in database.`);
         });
     }
     
@@ -309,7 +304,6 @@ class Database {
                     console.error(err.message);
                     reject(err);
                 }
-                console.log(`Added quote to database.`);
                 //find quote id and return it
                 this.db.get(`SELECT id FROM quotes WHERE quote = ?`, [quote], (err, row) => {
                     if (err) {
@@ -342,7 +336,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Deleted quote ${id} from database.`);
         });
     }
 
@@ -351,7 +344,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Added goal to database.`);
         });
     }
     
@@ -372,7 +364,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Added KOTH to database.`);
         });
     }
    
@@ -393,7 +384,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Added coinflip to database.`);
         });
     }
 
@@ -414,7 +404,6 @@ class Database {
             if (err) {
                 console.error(err.message);
             }
-            console.log(`Added roulette to database.`);
         });
     }
 
@@ -430,6 +419,45 @@ class Database {
         });
     }
 
+    addDisclaimer(name, message) {
+        this.db.run(`INSERT INTO disclaimers (name, message) VALUES (?, ?)`, [name, message], (err) => {
+            if (err) {
+                console.error(err.message);
+            }
+        });
+    }
+
+    getDisclaimers() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`SELECT * FROM disclaimers`, [], (err, rows) => {
+                if (err) {
+                    console.error(err.message);
+                    reject(err);
+                }
+                resolve(rows);
+            });
+        });
+    }
+
+    getDisclaimer(name) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`SELECT * FROM disclaimers WHERE name = ?`, [name], (err, row) => {
+                if (err) {
+                    console.error(err.message);
+                    reject(err);
+                }
+                resolve(row);
+            });
+        });
+    }
+    
+    deleteDisclaimer(name) {
+        this.db.run(`DELETE FROM disclaimers WHERE name = ?`, [name], (err) => {
+            if (err) {
+                console.error(err.message);
+            }
+        });
+    }
 
 
 }

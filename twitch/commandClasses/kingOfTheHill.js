@@ -69,7 +69,6 @@ class KingOfTheHill extends Command {
     }
 
     join(twitchbot, channel, args, userstate) {
-        console.log(this.kothActive);
         try {
             if (!this.kothActive) {
                 twitchbot.client.say(channel, `There is no king of the hill game active!`);

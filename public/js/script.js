@@ -178,5 +178,9 @@ $(document).ready(() => {
     setInterval (() => {
         ws.send(JSON.stringify({ type : 'updateUserInformation' }));
     }, 60000);
+        
+    setInterval(() => {
+        ws.send(JSON.stringify({ type : 'disclaimer' }));
+    }, 1800000);
 
 });
