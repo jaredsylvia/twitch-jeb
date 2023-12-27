@@ -33,8 +33,7 @@ class TwitchBot {
         this.userID = twitchUserID;
         this.channel = channel;
         this.wss = wss;
-        this.db = db;
-        this.client = null;
+        this.db = db;        
         this.coinFlipCommand = null;
         this.twitchApiClient = new TwitchApi(twitchOauthToken, null, twitchUserID);
         this.commands = [];
@@ -114,7 +113,11 @@ class TwitchBot {
     }
 
     async disconnect () {
+        try {
         await this.client.disconnect();
+        } catch (error) {
+            console.log(error);
+        }
         
     }
 
