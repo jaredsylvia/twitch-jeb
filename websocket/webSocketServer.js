@@ -146,7 +146,7 @@ class WebSocketServer {
                 break;
             case 'alert':
                 try {
-                    console.log(parsedMessage);
+                    
                     this.sendToWebSocket({
                         type: 'alert',
                         message: parsedMessage.message
@@ -170,15 +170,7 @@ class WebSocketServer {
     }
 
     async onClose() {
-        console.log('WebSocket client disconnected');
-        // try {
-        //     await this.twitchBotClient.disconnect();
-        // } catch (error) {
-        //     if(error instanceof TypeError) {
-        //         console.log('WS client doesn\'t control a bot');
-        //     }
-        //     console.log(error);
-        // }
+        console.log('WebSocket client disconnected');        
     }
 }
 
