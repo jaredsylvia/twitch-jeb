@@ -69,7 +69,7 @@ app.get('/', (req, res) => {
 
 // Define a route for the Twitch OAuth flow
 app.get('/auth/twitch', (req, res) => {
-    const redirectUri = `${serverBaseUrl}/auth/twitch/callback`;
+    const redirectUri = `https://${serverBaseUrl}/auth/twitch/callback`;
     const scope = 'channel:moderate+chat:edit+chat:read';
 
     const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
@@ -86,7 +86,7 @@ app.get('/auth/twitch/callback', async (req, res) => {
     params.append('client_secret', twitchSecret);
     params.append('code', code);
     params.append('grant_type', 'authorization_code');
-    params.append('redirect_uri', `${serverBaseUrl}/auth/twitch/callback`);
+    params.append('redirect_uri', `https://${serverBaseUrl}/auth/twitch/callback`);
 
     const response = await fetch('https://id.twitch.tv/oauth2/token', {
         method: 'POST',
@@ -101,7 +101,7 @@ app.get('/auth/twitch/callback', async (req, res) => {
     res.cookie('twitchOAuthToken', data.access_token, { sameSite: 'Strict' });
     res.cookie('twitchRefreshToken', data.refresh_token, { sameSite: 'Strict' });
     res.cookie('twitchExpiry', data.expires_in, { sameSite: 'Strict' });       
-    
+    console.log(data);
     // Redirect to the home page
     res.redirect('/');
 });
@@ -124,7 +124,7 @@ app.get('/dashboard', (req, res) => {
         console.log("Twitch bot not running.");
     }
     if (twitchOAuthToken) {
-        res.render('dashboard', { twitchUsername });
+        res.render('dashboard', { twitchUsername, serverBaseUrl });
         console.log(`Twitch username: ${twitchUsername}`);
         twitchBotClient = new TwitchBot(twitchUsername, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchUserID, twitchChannel, wss, db);
         wss.setTwitchBot(twitchBotClient);
