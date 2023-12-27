@@ -81,7 +81,6 @@ class TwitchBot {
         //check if client is already connected
         if(this.client) {
             await this.disconnect();
-            this.client = null;
         }
         console.log('Connecting to Twitch...');
         this.client = new tmi.client(options);
@@ -116,7 +115,7 @@ class TwitchBot {
 
     async disconnect () {
         await this.client.disconnect();
-        this.client = null;
+        
     }
 
     async updateWss (wss) {
