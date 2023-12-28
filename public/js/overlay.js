@@ -74,11 +74,13 @@ $(document).ready(() => {
                             $('#clip').css("visibility", "visible");
                             $('#clip').attr("src", clips[clipIndex]);
                             clipIndex++;
-                            // if(clipIndex >= clips.length) {
-                            //     clipIndex = 0;
-                            //     //stop playing clips and hide iframe
-                            //     $('#clip').attr("src", "");
-                            //     $('#clip').css("visibility", "hidden");
+                            if(clipIndex >= clips.length) {
+                                clipIndex = 0;
+                                //stop playing clips and hide iframe
+                                $('#clip').attr("src", "");
+                                $('#clip').css("visibility", "hidden");
+                                clips = [];
+                            }
                         }
                         //if command is "clips stop" stop playing clips and hide iframe
                         if(messageText.includes("stop")) {
@@ -265,7 +267,33 @@ $(document).ready(() => {
                 
             break;
         }
-    };    
+    };
+    //Listen for youtube video end and play next clip
+    $('#clip').on('ended', function() {
+        $('#clip').attr("src", clips[clipIndex]);
+        clipIndex++;
+        if(clipIndex >= clips.length) {
+            clipIndex = 0;
+            //stop playing clips and hide iframe
+            $('#clip').attr("src", "");
+            $('#clip').css("visibility", "hidden");
+        }
+    });
+    
+    //Listen for twitch clip end and play next clip
+    $('#clip').on('load', function() {
+        $('#clip').contents().find("video").on('ended', function() {
+            $('#clip').attr("src", clips[clipIndex]);
+            clipIndex++;
+            if(clipIndex >= clips.length) {
+                clipIndex = 0;
+                //stop playing clips and hide iframe
+                $('#clip').attr("src", "");
+                $('#clip').css("visibility", "hidden");
+            }
+        });
+    });
+
     //Hacker text
     
     const charactersPerLine = 175; // Adjust the number of characters per line
