@@ -1,7 +1,7 @@
 $(document).ready(() => {
     let ws = new WebSocket(`${webSocketAddress}`);
     const hackerTextElement = $('#hacker-text');
-    const clips = [];
+    let clips = [];
     let clipIndex = 0;
     var urlRegex = /(https?:\/\/[^ ]*)/;
     let followerGoal;
