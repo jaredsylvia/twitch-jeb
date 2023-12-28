@@ -73,14 +73,15 @@ $(document).ready(() => {
                             console.log(clips);
                             $('#clip').css("visibility", "visible");
                             $('#clip').attr("src", clips[clipIndex]);
-                            clipIndex++;
                             if(clipIndex >= clips.length) {
                                 clipIndex = 0;
                                 //stop playing clips and hide iframe
                                 $('#clip').attr("src", "");
                                 $('#clip').css("visibility", "hidden");
                                 clips = [];
-                            }
+                            } else {
+                                clipIndex++;
+                            }                            
                         }
                         //if command is "clips stop" stop playing clips and hide iframe
                         if(messageText.includes("stop")) {
