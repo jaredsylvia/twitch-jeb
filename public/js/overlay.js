@@ -45,23 +45,23 @@ $(document).ready(() => {
                         let slug = url.split("/")[5];
                         //add embed url to clips array
                         clips.push(`https://clips.twitch.tv/embed?clip=${slug}&parent=${window.location.hostname}&autoplay=true&mute=false`);
-                        console.log(clips);
+                                              
                     }
-
+                    /*
                     //Youtube
                     if(url.includes("youtu.be")) {
                         //extract slug from url
                         let slug = url.split("/")[3];
                         //add embed url to clips array
-                        clips.push(`https://www.youtube.com/embed/${slug}?autoplay=1&mute=0?controls=0`);
+                        clips.push(`https://www.youtube.com/embed/${slug}?autoplay=1&mute=0`);
                     }
                     if(url.includes("youtube.com")) {
                         //extract slug from url
                         let slug = url.split("/")[3];
                         slug = slug.split("=")[1];
                         //add embed url to clips array
-                        clips.push(`https://www.youtube.com/embed/${slug}?autoplay=1&mute=0?controls=0`);
-                    }
+                        clips.push(`https://www.youtube.com/embed/${slug}?autoplay=1&mute=0`);
+                    }*/
                 }
                 //If user is mod, vip or broadcaster
                 if(message.userstate.mod || message.userstate.badges.vip || message.userstate.badges.broadcaster) {
