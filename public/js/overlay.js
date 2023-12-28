@@ -42,7 +42,7 @@ $(document).ready(() => {
                     //Twitch
                     if(url.includes("twitch.tv")) {
                         //extract slug from url
-                        let slug = url.split("/")[3];
+                        let slug = url.split("/")[5];
                         //add embed url to clips array
                         clips.push(`https://clips.twitch.tv/embed?clip=${slug}&parent=${window.location.hostname}`);
                         console.log(clips);
