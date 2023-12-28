@@ -37,6 +37,7 @@ class TwitchBot {
         this.coinFlipCommand = null;
         this.twitchApiClient = new TwitchApi(twitchOauthToken, null, twitchUserID);
         this.commands = [];
+        this.running = false;
 
         this.onTwitchBotConnectedHandler = this.onTwitchBotConnectedHandler.bind(this);
         this.onTwitchBotDisconnectedHandler = this.onTwitchBotDisconnectedHandler.bind(this);
@@ -65,6 +66,9 @@ class TwitchBot {
     }
 
     async connect () {
+        if(this.running) {
+            return;
+        }
         const options = {
           identity: {
             username: this.username,
@@ -72,14 +76,14 @@ class TwitchBot {
           },
             channels: [ this.channel ]
         };
-        
+                
         //check if client is already connected
         if(this.client) {
             await this.disconnect();
         }
         console.log('Connecting to Twitch...');
         this.client = new tmi.client(options);
-        
+        this.running = true;        
 
         this.client.on('connected', this.onTwitchBotConnectedHandler);
         this.client.on('disconnected', this.onTwitchBotDisconnectedHandler);

@@ -135,15 +135,21 @@ app.get('/dashboard', (req, res) => {
     const twitchRefreshToken = req.cookies?.twitchRefreshToken;
     
     if (twitchOAuthToken) {
-        if(!twitchBotClient) {
-            twitchBotClient = new TwitchBot(twitchUsername, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchUserID, twitchChannel, wss, db);
+        try {
+        if(twitchBotClient.running === false) {
+            twitchBotClient.updateOauthToken(twitchOAuthToken);
+            twitchBotClient.connect();
         } else {
             twitchBotClient.updateOauthToken(twitchOAuthToken);
+        } 
+        } catch (error) {
+            twitchBotClient = new TwitchBot(twitchUsername, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchUserID, twitchChannel, wss, db);
+            wss.setTwitchBot(twitchBotClient);
+            wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel);
+            twitchBotClient.setupCommands();
+            twitchBotClient.connect();
         }
-        wss.setTwitchBot(twitchBotClient);
-        wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel);
-        twitchBotClient.setupCommands();
-
+        
         res.render('dashboard', { twitchUsername, twitchChannel, serverHost, webSocketAddress });
         
     } else {
