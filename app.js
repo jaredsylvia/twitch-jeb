@@ -117,8 +117,8 @@ app.get('/auth/twitch/callback', async (req, res) => {
     res.cookie('twitchRefreshToken', data.refresh_token, { sameSite: 'Strict', httpOnly: false });
     res.cookie('twitchExpiry', data.expires_in, { sameSite: 'Strict', httpOnly: false });       
     
-    // Redirect to the home page
-    res.redirect('/');
+    // Redirect to the dashboard
+    res.redirect('/dashboard');
 });
 
 // Define a route for the logout page

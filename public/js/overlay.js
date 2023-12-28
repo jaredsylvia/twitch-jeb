@@ -1,8 +1,11 @@
 $(document).ready(() => {
-    const ws = new WebSocket(`${webSocketAddress}`);
+    let ws = new WebSocket(`${webSocketAddress}`);
     const hackerTextElement = $('#hacker-text');
+    const clips = [];
+    let clipIndex = 0;
+    var urlRegex = /(https?:\/\/[^ ]*)/;
     let followerGoal;
-    
+
     ws.onerror = (event) => {
         console.error('WebSocket error:', event);
     };
@@ -10,6 +13,11 @@ $(document).ready(() => {
     ws.onopen = () => {
         console.log('WebSocket client connected');
         ws.send(JSON.stringify({ type : 'getInfo' }));
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket client disconnected');
+        //ws = new WebSocket(`${webSocketAddress}`);
     };
 
     ws.onmessage = (event) => {
@@ -26,6 +34,60 @@ $(document).ready(() => {
                 $('#messages').append(messageHtml);
                 //Scroll to bottom of messages
                 $('#chatArea').animate({ scrollTop: $('#chatArea').prop('scrollHeight') }, 1000);
+                //If message contains a URL, extract it
+                if(messageText.match(urlRegex)) {
+                    let url = messageText.match(urlRegex)[0];
+                    //If URL is a clip, add it to the clips array
+                    
+                    //Twitch
+                    if(url.includes("twitch.tv")) {
+                        //extract slug from url
+                        let slug = url.split("/")[3];
+                        //add embed url to clips array
+                        clips.push(`https://clips.twitch.tv/embed?clip=${slug}&parent=${window.location.hostname}`);
+                        console.log(clips);
+                    }
+
+                    //Youtube
+                    if(url.includes("youtu.be")) {
+                        //extract slug from url
+                        let slug = url.split("/")[3];
+                        //add embed url to clips array
+                        clips.push(`https://www.youtube.com/embed/${slug}?autoplay=1&mute=0?controls=0`);
+                    }
+                    if(url.includes("youtube.com")) {
+                        //extract slug from url
+                        let slug = url.split("/")[3];
+                        slug = slug.split("=")[1];
+                        //add embed url to clips array
+                        clips.push(`https://www.youtube.com/embed/${slug}?autoplay=1&mute=0?controls=0`);
+                    }
+                }
+                //If user is mod, vip or broadcaster
+                if(message.userstate.mod || message.userstate.badges.vip || message.userstate.badges.broadcaster) {
+                    //If message contains !clip command make iframe visible and play clips in order
+                    if(messageText.includes("!clips")) {
+                        console.log(messageText);
+                        //if command is "clip play" make iframe visible and play clips in order
+                        if(messageText.includes("play")) {
+                            console.log(clips);
+                            $('#clip').css("visibility", "visible");
+                            $('#clip').attr("src", clips[clipIndex]);
+                            clipIndex++;
+                            // if(clipIndex >= clips.length) {
+                            //     clipIndex = 0;
+                            //     //stop playing clips and hide iframe
+                            //     $('#clip').attr("src", "");
+                            //     $('#clip').css("visibility", "hidden");
+                        }
+                        //if command is "clips stop" stop playing clips and hide iframe
+                        if(messageText.includes("stop")) {
+                            console.log(clips);
+                            $('#clip').css("visibility", "hidden");
+                            $('#clip').attr("src", "");
+                        }
+                    }                
+                }
                 break;
             case 'user':
                 console.log(message);
@@ -203,18 +265,7 @@ $(document).ready(() => {
                 
             break;
         }
-    };
-
-    function formatNameList(names) {
-        if (names.length > 0) {
-            names = names.substring(0, names.length - 1);
-            names = names.replace(/,/g, ', ');
-            names = names.replace(/, ([^,]*)$/, ' and $1');
-            return names;
-        } else {
-            return "No one";
-        }
-    }
+    };    
     //Hacker text
     
     const charactersPerLine = 175; // Adjust the number of characters per line
@@ -244,10 +295,7 @@ $(document).ready(() => {
 
     // Alerts in mainBody section
     function showAlert(message) {
-        var overlay = $("#overlay");
         var alertElement = $("#customAlert");
-
-        
 
         alertElement.text(message);
         alertElement.slideDown(500, function () {
