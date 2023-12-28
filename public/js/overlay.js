@@ -44,7 +44,7 @@ $(document).ready(() => {
                         //extract slug from url
                         let slug = url.split("/")[5];
                         //add embed url to clips array
-                        clips.push(`https://clips.twitch.tv/embed?clip=${slug}&parent=${window.location.hostname}`);
+                        clips.push(`https://clips.twitch.tv/embed?clip=${slug}&parent=${window.location.hostname}&autoplay=true&mute=false`);
                         console.log(clips);
                     }
 
