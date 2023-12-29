@@ -37,7 +37,7 @@ class TwitchAPIClient {
         });
         
         if (response.status !== 200) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
+            //console.log(`Error: Twitch API returned status ${response.status}`);
             if(response.status === 401) {
                 this.renewOauth();
             }
@@ -65,8 +65,7 @@ class TwitchAPIClient {
         });
 
         if (response.status !== 200) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            console.log(response.body);
+            //console.log(`Error: Twitch API returned status ${response.status}`);
             if(response.status === 401) {
                 this.renewOauth();
             }
@@ -82,6 +81,66 @@ class TwitchAPIClient {
             
         return data;
     }
+
+    async setGameTitle(gamename) {
+        const lookupResponse = await fetch(`https://api.twitch.tv/helix/games?name=${gamename}`, {
+            method: 'GET',
+            headers: {
+                'Client-ID': this.clientId,
+                'Authorization': `Bearer ${this.oauthToken}`
+            }
+        });
+        const gameData = await lookupResponse.json();
+        const gameID = gameData.data[0].id;
+
+        const response = await fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${this.userID}`, {
+            method: 'PATCH',
+            headers: {
+                'Client-ID': this.clientId,
+                'Authorization': `Bearer ${this.oauthToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                game_id: gameID
+            })
+        });
+
+        if (response.status !== 200 || response.status !== 204) {
+            console.log(`Error: Twitch API returned status ${response.status}`);
+            if(response.status === 401) {
+                this.renewOauth();
+            }
+            return null;
+        }
+
+        const data = await response.json();
+        return data;
+    }
+
+    async setStreamTitle(title) {
+        const response = await fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${this.userID}`, {
+            method: 'PATCH',
+            headers: {
+                'Client-ID': this.clientId,
+                'Authorization': `Bearer ${this.oauthToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: title
+            })
+        });
+
+        if (response.status !== 200 || response.status !== 204) {
+            console.log(`Error: Twitch API returned status ${response.status}`);
+            if(response.status === 401) {
+                this.renewOauth();
+            }
+            return null;
+        }
+
+        const data = await response.json();
+        return data;
+    }    
 
     async getFollowerCount() {
         const response = await fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.userID}`, {
@@ -276,9 +335,12 @@ class TwitchAPIClient {
             console.log(`Error: ${response.body}`);
             return null;
         } else {
-            this.oauthToken = response.access_token;
-            console.log(`Successfully renewed OAuth token`);
             const data = await response.json();
+            this.oauthToken = data.access_token;
+            this.refreshToken = data.refresh_token;
+            const time = new Date().toLocaleTimeString();
+            console.log(`Successfully renewed OAuth token at ${time}`);
+            
             return data;
             }   
     }

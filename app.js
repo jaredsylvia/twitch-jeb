@@ -85,7 +85,7 @@ app.get('/', (req, res) => {
 // Define a route for the Twitch OAuth flow
 app.get('/auth/twitch', (req, res) => {
     const redirectUri = `${serverBaseUrl}/auth/twitch/callback`;
-    const scope = 'channel:moderate+chat:edit+chat:read';
+    const scope = 'channel:moderate+chat:edit+chat:read+channel:manage:broadcast';
 
     const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
 
@@ -111,6 +111,10 @@ app.get('/auth/twitch/callback', async (req, res) => {
     const data = await response.json();
 
     twitchOAuthToken = data.access_token;
+    // Clear cookies
+    res.clearCookie('twitchOAuthToken');
+    res.clearCookie('twitchRefreshToken');
+    res.clearCookie('twitchExpiry');
 
     // Store the OAuth token in a cookie or session
     res.cookie('twitchOAuthToken', data.access_token, { sameSite: 'Strict', httpOnly: false });

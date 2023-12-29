@@ -16,83 +16,92 @@
 
 <body>
 	<div class="container-fluid">
-		<div class="row">
+		<div class="row header">
 			<div class="col-md-12">
 				<div class="row">
-					<div class="col-md-4">
+					<div class="col-md-3 leftHeader">
 						<% if (twitchUsername) { %>
-							<p>Logged in as <%= twitchUsername %>
-							</p>
+							<p>Logged in as <span class="userName"><%= twitchUsername %></span></p>
 							<button type="button" class="btn btn-primary" id="update">Update</button><button type="button" class="btn btn-primary" id="startBot">Start Bot</button><button type="button" class="btn btn-primary" id="stopBot">Stop Bot</button>
-							<p><a href="/logout">Logout</a></p>
+							<a href="/logout" class="btn btn-primary">Logout</a>
 							<% } else { %>
-							<p><a href="/auth/twitch">Login with Twitch</a></p>
+							<a href="/auth/twitch" class="btn btn-primary">Login with Twitch</a>
 						<% } %>
 					</div>
-					<div class="col-md-4">
+					<div class="col-md-6 midHeader">
+						<input type="text" id="gameTitle" name="gameTitle" placeholder="Game Title" value="gameTitle">
+						<button type="button" class="btn btn-primary" id="setGameTitle">Set Game Title</button>
+						<input type="text" id="streamTitle" name="streamTitle" placeholder="Stream Title" value="streamTitle">
+						<button type="button" class="btn btn-primary" id="setStreamTitle">Set Stream Title</button><br>
 						<input type="text" id="alertText" name="alertText" placeholder="Alert" value="alert">
 						<button type="button" class="btn btn-primary" id="sendAlert">Send Alert</button>
 					</div>
-					<div class="col-md-4">
-						<div class="col-md-6 followers">
-							Followers: <p id="followers"></p>
-						</div>
-						<div class="col-md-6 viewers">
-							Viewers: <p id="viewers"></p>
-						</div>						
+					<div class="col-md-3 rightHeader">
+							<div>Followers: <span id="followers"></span></div>
+							<div>Viewers: <span id="viewers"></span></div>
+							<div>Subs: <span id="subs"></span></div>
 					</div>
 				</div>
 			</div>
 		</div>
-		<div class="row">
-			<div class="col-md-2">
-				<div class="col-md-6 recentUsers">
+
+		<div class="row mainRow">
+			<div class="col-md-2 leftBar">
+				<div class="col-md-12">
+					<div class="recentUsers">
 					Recently Joined: 
-					<ul id="recentJoined">
-					
-					</ul>
+					<p id="recentJoined"></p>
 					Recently Followed:
-					<ul id="recentFollowed">
-					</ul>
-					Current KoTH:
-					<ul id="koth">
-					</ul>
-					Last Roulette Winner:
-					<ul id="roulette">
-					</ul>
-					Last Coinflip Winner:
-					<ul id="coinflip">
-					</ul>									
-				</div>
-				<div class="col-md-6 channelInfo">
+					<p id="recentFollowed"></p>
+					Recently Subbed:
+					<p id="recentSubbed"></p>
+					</div>
+
+					<div class="channelInfo">
 					Game: <p id="game"></p>
 					Stream: <p id="title"></p>
+					</div>
+			
 				</div>
-
 			</div>
-			<div class="col-md-8">
+
+			<div class="col-md-8 streamPreview">
 				<div class="aspect-ratio">
 				<iframe
 					src="https://player.twitch.tv/?channel=<%= twitchChannel %>&parent=<%= serverHost %>"
 					width="80%"
 					allowfullscreen>
 				</iframe>
+				</div>
 			</div>
-			</div>
-			<div class="col-md-2">
-				<div id="messages">
+
+			<div class="col-md-2 chatDashboard" id="chatArea">
+				<div id="messages" class="chatOverlay">
 								
 				</div>
 			</div>
-		</div>
+	</div>
+
 		<div class="row">
 			<div class="col-md-12">
 				<div class="row">
 					<div class="col-md-4">
+						<div id="kothWinner"></div>
+						<div id="kothStatus"></div>
+						<div id="kothPlayers"></div>
 					</div>
 					<div class="col-md-4">
+						<div id="winningCoin"></div>
+						<div id="coinflipWinner"></div>
+						<div id="coinflipStatus"></div>
+						<div id="coinflipHeads"></div>
+						<div id="coinflipTails"></div>						
 					</div>
 					<div class="col-md-4">
+						<div id="rouletteWinner"></div>
+						<div id="rouletteStatus"></div>
+						<div id="roulettePlayers"></div>
+						<div id="roulettePool"></div>
 					</div>
 				</div>
 			</div>

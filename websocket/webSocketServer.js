@@ -163,6 +163,20 @@ class WebSocketServer {
                     console.log(error);
                 }
                 break;
+            case 'setGameTitle':
+                try {
+                    this.twitchApiClient.setGameTitle(parsedMessage.game);
+                } catch (error) {
+                    console.log(error);
+                }
+                break;
+            case 'setStreamTitle':
+                try {
+                    this.twitchApiClient.setStreamTitle(parsedMessage.title);
+                } catch (error) {
+                    console.log(error);
+                }
+                break;
             default:
                 break;
         }

@@ -1,4 +1,3 @@
-const { parse } = require('dotenv');
 const Command = require('./command.js');
 
 class Roulette extends Command {

@@ -4,7 +4,7 @@ $(document).ready(() => {
     const refresh_token = document.cookie.split('; ').find(row => row.startsWith('twitchRefreshToken')).split('=')[1];
     const oauth_token = document.cookie.split('; ').find(row => row.startsWith('twitchOAuthToken')).split('=')[1];
     let expiry = document.cookie.split('; ').find(row => row.startsWith('twitchExpiry')).split('=')[1];
-
+    let msgCount = 0;
     const hackerTextElement = $('#hacker-text');
     
     
@@ -16,6 +16,7 @@ $(document).ready(() => {
         console.log('WebSocket client connected');
         //ws.send(JSON.stringify({ type : 'startBot' }));
         ws.send(JSON.stringify({ type : 'getInfo' }));
+        ws.send(JSON.stringify({ type : 'disclaimer' }));
     };
 
     ws.onmessage = (event) => {
@@ -23,11 +24,6 @@ $(document).ready(() => {
 
         switch (message.type) {
             case 'message':
-                //Check number of <p> tags in <div> with id="messages"
-                if ($('#messages p').length >= 10) {
-                    //Remove first <p> tag in <div> with id="messages"
-                    $('#messages p:first').remove();
-                }
                 //Create chat message in <p> tag
                 let username = message.userstate['display-name'];
                 let color = message.userstate.color;
@@ -35,6 +31,9 @@ $(document).ready(() => {
                 let messageHtml = `<p class="messageText"><span style="color: ${color}">${username}</span>: <span style="color: #FFFFFF">${messageText}</span></p>`;
                 //Append message to <div> with id="messages"
                 $('#messages').append(messageHtml);
+                //Scroll to bottom of messages
+                $('#chatArea').animate({ scrollTop: $('#chatArea').prop('scrollHeight') }, 1000);
+                msgCount++;
                 break;
             case 'user':
                 console.log(message);
@@ -106,16 +105,22 @@ $(document).ready(() => {
                 let mostRecentFollower = message.mostRecentFollower;
                 let mostRecentSubscriber = message.mostRecentSubscriber;
                 let mostRecentViewer = message.mostRecentViewer;
-                console.log(message);
+                
                 // Update information on page
                 $('#game').text(game);
                 $('#title').text(title);
                 $('#viewers').text(viewers);
-                $('#followers').text(followers);
+                $('#followers').text(`${followers} / ${goals[0].goal}`);
                 $('#koth').text(koth.kothWinner);
                 $('#roulette').text(roulette.rouletteWinner);
                 $('#coinflip').text(coinflip.firstWinner);
-                $('#goal1').text(goals[0]);
+                $('#kothWinner').text("Current KoTH: " + koth.kothWinner);
+                $('#kothPlayers').text("Players: " + koth.kothPlayers.substring(0, koth.kothPlayers.length - 1).replace(/,/g, ', '));
+                $('#rouletteWinner').text("Last roulette winner: " + roulette.rouletteWinner);
+                $('#roulettePlayers').text("Players: " + roulette.roulettePlayers);
+                $('#roulettePool').text("Pool: " + roulette.roulettePool);
+                $('#coinflipWinner').text("Last coinflip winner: " + coinflip.firstWinner);
+                $('#winningCoin').text("Winning coin: " + coinflip.winningCoin);                       
                 $('#goal2').text(goals[1]);
                 $('#goal3').text(goals[2]);
                 $('#goal4').text(goals[3]);
@@ -158,6 +163,18 @@ $(document).ready(() => {
         ws.send(JSON.stringify({ type : 'alert', message: alertText }));
     });
 
+    $('#setGameTitle').click(() => {
+        let gameTitle = $('#gameTitle').val();
+        ws.send(JSON.stringify({ type : 'setGameTitle', game: gameTitle }));
+    });
+
+    $('#setStreamTitle').click(() => {
+        let streamTitle = $('#streamTitle').val();
+        ws.send(JSON.stringify({ type : 'setStreamTitle', title: streamTitle }));
+    });
+
+
+
     $(window).on('beforeunload', () => {
         //ws.close();
     });
@@ -179,7 +196,11 @@ $(document).ready(() => {
     }, 60000);
         
     setInterval(() => {
-        ws.send(JSON.stringify({ type : 'disclaimer' }));
+        if (msgCount >= 10) {
+            msgCount = 0;
+            ws.send(JSON.stringify({ type : 'disclaimer' }));
+        }
+        
     }, 1800000);
 
 });
