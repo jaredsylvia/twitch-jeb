@@ -177,8 +177,7 @@ body {
 
 .bottom-hd-dimensions {
     width: 320px; 
-    height: 180px; 
-    float: left; 
+    height: 180px;     
     margin: 0 auto; 
     background-color: #333333;
     border: 5px double grey;

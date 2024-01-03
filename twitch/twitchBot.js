@@ -116,9 +116,9 @@ class TwitchBot {
 
             await this.client.connect();
         } catch (error) {
-            console.log(error);
+            console.error(`error connecting to Twitch: ${error}`);
         }
-        
+
     }
 
     async disconnect () {
