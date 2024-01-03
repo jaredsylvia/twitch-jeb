@@ -69,23 +69,23 @@ class TwitchBot {
 
     async connect () {
         
-            if(this.running) {
-                return;
-            }
-            try {
-            const options = {
-            identity: {
-                username: this.username,
-                password: this.oauthToken
-            },
-                channels: [ this.channel ]
-            };
-                    
-            //check if client is already connected
-            if(this.client) {
-                await this.disconnect();
-            }
-            console.log('Connecting to Twitch...');
+        if(this.running) {
+            return;
+        }
+        const options = {
+        identity: {
+            username: this.username,
+            password: this.oauthToken
+        },
+            channels: [ this.channel ]
+        };
+                
+        //check if client is already connected
+        if(this.client) {
+            await this.disconnect();
+        }
+        console.log('Connecting to Twitch...');
+        try{
             this.client = new tmi.client(options);
             this.running = true;        
 
@@ -118,7 +118,8 @@ class TwitchBot {
             await this.client.connect();
         } catch (error) {
             console.error(`error connecting to Twitch: ${error}`);
-            throw error;
+            console.trace(`Full stack trace: ${error.stack}`);
+            process.exit(1);
         }
 
     }
