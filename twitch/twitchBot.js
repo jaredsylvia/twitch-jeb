@@ -68,10 +68,11 @@ class TwitchBot {
     }
 
     async connect () {
-        try {
+        
             if(this.running) {
                 return;
             }
+            try {
             const options = {
             identity: {
                 username: this.username,
@@ -117,6 +118,7 @@ class TwitchBot {
             await this.client.connect();
         } catch (error) {
             console.error(`error connecting to Twitch: ${error}`);
+            throw error;
         }
 
     }
