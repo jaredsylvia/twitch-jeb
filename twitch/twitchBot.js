@@ -116,18 +116,21 @@ class TwitchBot {
             this.client.on('cheer', this.onTwitchBotCheerHandler);
             console.log('Twitch client event handlers set');
 
-            this.client.connect().catch((error) => {
+            try {
+                await this.client.connect();
+                console.log('Connected to Twitch!');
+            } catch (error) {
                 console.error('Error connecting to Twitch:', error);
                 console.trace('Full stack trace:', error.stack);
-            
+        
                 if (error.message === 'Not connected to server.') {
                     console.error('The error occurred during the connection attempt.');
                 } else {
                     console.error('Unknown error during the connection attempt.');
                 }
-            
+        
                 process.exit(1); // Exit the process with an error code
-            });
+            }
             console.log('Connected to Twitch!');
         
     }
