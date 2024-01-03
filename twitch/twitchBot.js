@@ -68,52 +68,57 @@ class TwitchBot {
     }
 
     async connect () {
-        if(this.running) {
-            return;
-        }
-        const options = {
-          identity: {
-            username: this.username,
-            password: this.oauthToken
-          },
-            channels: [ this.channel ]
-        };
+        try {
+            if(this.running) {
+                return;
+            }
+            const options = {
+            identity: {
+                username: this.username,
+                password: this.oauthToken
+            },
+                channels: [ this.channel ]
+            };
+                    
+            //check if client is already connected
+            if(this.client) {
+                await this.disconnect();
+            }
+            console.log('Connecting to Twitch...');
+            this.client = new tmi.client(options);
+            this.running = true;        
+
+            this.client.on('connected', this.onTwitchBotConnectedHandler);
+            this.client.on('disconnected', this.onTwitchBotDisconnectedHandler);
+            
+            this.client.on('message', this.onTwichBotMessageHandler);
+            this.client.on('messagedeleted', this.onTwitchBotMessageDeletedHandler);
+                    
+            this.client.on('join', this.onTwitchBotJoinHandler);
+            this.client.on('part', this.onTwitchBotPartHandler);
+            
+            this.client.on('mod', this.onTwitchBotModHandler);
+            this.client.on('unmod', this.onTwitchBotUnmodHandler);
+            
+            this.client.on('follow', this.onTwitchBotFollowHandler);
+            
+            this.client.on('ban', this.onTwitchBotBanHandler);
+            this.client.on('timeout', this.onTwitchBotTimeoutHandler);
+
+            this.client.on('raided', this.onTwitchBotRaidedHandler);
+            
+            this.client.on('subscription', this.onTwitchBotSubscriptionHandler);
+            this.client.on('subgift', this.onTwitchBotSubgiftHandler);
+            this.client.on('submysterygift', this.onTwitchBotSubmysterygiftHandler);
+
+            this.client.on('cheer', this.onTwitchBotCheerHandler);
                 
-        //check if client is already connected
-        if(this.client) {
-            await this.disconnect();
+
+            await this.client.connect();
+        } catch (error) {
+            console.log(error);
         }
-        console.log('Connecting to Twitch...');
-        this.client = new tmi.client(options);
-        this.running = true;        
-
-        this.client.on('connected', this.onTwitchBotConnectedHandler);
-        this.client.on('disconnected', this.onTwitchBotDisconnectedHandler);
         
-        this.client.on('message', this.onTwichBotMessageHandler);
-        this.client.on('messagedeleted', this.onTwitchBotMessageDeletedHandler);
-                
-        this.client.on('join', this.onTwitchBotJoinHandler);
-        this.client.on('part', this.onTwitchBotPartHandler);
-        
-        this.client.on('mod', this.onTwitchBotModHandler);
-        this.client.on('unmod', this.onTwitchBotUnmodHandler);
-        
-        this.client.on('follow', this.onTwitchBotFollowHandler);
-        
-        this.client.on('ban', this.onTwitchBotBanHandler);
-        this.client.on('timeout', this.onTwitchBotTimeoutHandler);
-
-        this.client.on('raided', this.onTwitchBotRaidedHandler);
-        
-        this.client.on('subscription', this.onTwitchBotSubscriptionHandler);
-        this.client.on('subgift', this.onTwitchBotSubgiftHandler);
-        this.client.on('submysterygift', this.onTwitchBotSubmysterygiftHandler);
-
-        this.client.on('cheer', this.onTwitchBotCheerHandler);
-               
-
-        await this.client.connect();
     }
 
     async disconnect () {
