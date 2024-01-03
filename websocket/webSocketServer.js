@@ -19,8 +19,12 @@ class WebSocketServer {
     }
 
     async setupWebSocketServer() {
-        this.wss.on('listening', this.onListening.bind(this));
-        this.wss.on('connection', this.onConnection.bind(this));
+        try {
+            this.wss.on('listening', this.onListening.bind(this));
+            this.wss.on('connection', this.onConnection.bind(this));
+        } catch (error) {
+            console.error('Error in setupWebSocketServer:', error);
+        }
     }
 
     async sendToWebSocket(data) {
