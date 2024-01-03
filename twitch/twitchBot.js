@@ -116,7 +116,7 @@ class TwitchBot {
             this.client.on('cheer', this.onTwitchBotCheerHandler);
             console.log('Twitch client event handlers set');
 
-            await this.client.connect().catch((error) => {
+            this.client.connect().catch((error) => {
                 console.error('Error connecting to Twitch:', error);
                 console.trace('Full stack trace:', error.stack);
             
