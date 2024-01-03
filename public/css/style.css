@@ -183,6 +183,9 @@ body {
     background-color: #333333;
     border: 5px double grey;
     padding: 10px;
+    font-size: 12px;
+    display: inline-block;
+    
 }
 
 table {
@@ -273,3 +276,20 @@ td {
     }
 }
 
+/* Override Bootstrap default styles for progress bars */
+.progress-bar {
+    background-color: #212657;
+    border-radius: 20px;
+    overflow: visible;
+}
+
+.progress {
+    background-color: #4b4b4b;
+    padding: 2px;
+    margin-bottom: 2px; 
+    overflow: visible;
+}
+
+.progress-text {
+    overflow: visible;
+}

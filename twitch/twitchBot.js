@@ -60,7 +60,9 @@ class TwitchBot {
         
         this.onTwitchBotSubscriptionHandler = this.onTwitchBotSubscriptionHandler.bind(this);
         this.onTwitchBotSubgiftHandler = this.onTwitchBotSubgiftHandler.bind(this);
-        this.onTwitchBotSubmysterygiftHandler = this.onTwitchBotSubmysterygiftHandler.bind(this);        
+        this.onTwitchBotSubmysterygiftHandler = this.onTwitchBotSubmysterygiftHandler.bind(this);
+
+        this.onTwitchBotCheerHandler = this.onTwitchBotCheerHandler.bind(this);
 
         console.log('TwitchBot instantiated');
     }
@@ -107,6 +109,8 @@ class TwitchBot {
         this.client.on('subscription', this.onTwitchBotSubscriptionHandler);
         this.client.on('subgift', this.onTwitchBotSubgiftHandler);
         this.client.on('submysterygift', this.onTwitchBotSubmysterygiftHandler);
+
+        this.client.on('cheer', this.onTwitchBotCheerHandler);
                
 
         await this.client.connect();
@@ -286,6 +290,8 @@ class TwitchBot {
         // Set follower status to true
         await this.db.setFollower(username, true);
 
+        // Add points to user
+        await this.db.addPoints(username, 1000);
     }
     
     async onTwitchBotRaidedHandler(channel, username, viewers) {
@@ -306,6 +312,12 @@ class TwitchBot {
             message,
             userstate
         });
+
+        // Set subscriber status to true
+        await this.db.setSubscriber(username, true);
+
+        // Add points to user
+        await this.db.addPoints(username, 1000);
     }
     
     async onTwitchBotSubgiftHandler(channel, username, streakMonths, recipient, methods, userstate) {
@@ -374,6 +386,21 @@ class TwitchBot {
                 }
             }
         }
+    }
+
+    async onTwitchBotCheerHandler(channel, userstate, message) {
+        this.wss.sendToWebSocket({
+            type: 'cheer',
+            channel,
+            userstate,
+            message
+        });
+
+        //update cheer count
+        this.twitchApiClient.bits += userstate.bits;       
+
+        // Add points to user
+        await this.db.addPoints(userstate.username, userstate.bits * 10);
     }
 
     async updateOauthToken (twitchOauthToken) {

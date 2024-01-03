@@ -16,3 +16,4 @@ TODO:
 * Timers.
 * Ideally learn React.
 * Implement JWST or a better OAuth refresh method that doesn't use cookies.
+* Refactor more.

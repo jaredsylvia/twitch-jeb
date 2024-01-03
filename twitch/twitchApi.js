@@ -179,6 +179,34 @@ class TwitchAPIClient {
         });
     }
 
+    async getSubscriberCount() {
+        const response = await fetch(`https://api.twitch.tv/helix/subscriptions?broadcaster_id=${this.userID}`, {
+            method: 'GET',
+            headers: {
+                'Client-ID': this.clientId,
+                'Authorization': `Bearer ${this.oauthToken}`
+            }
+        });
+
+        if (response.status !== 200) {
+            console.log(`Error: Twitch API returned status ${response.status}`);
+            if(response.status === 401) {
+                this.renewOauth();
+            }
+            return null;
+        }
+
+        const data = await response.json();
+
+        if (data.total.length === 0) {
+            console.log(`User does not have any subscribers`);
+            return null;
+        }
+
+        return data.total;
+    }    
+
+
     async checkFollower(username) {
         const response = await fetch(`https://api.twitch.tv/helix/users/follows?to_id=${this.userID}&from_name=${username}`, {
             method: 'GET',
