@@ -232,3 +232,10 @@ app.get('/dashboard', (req, res) => {
 app.get('/overlay', (req, res) => {
     res.render('overlay', { twitchUsername, webSocketAddress });      
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Optionally, you can log the stack trace for more details.
+    console.error(reason.stack);
+    // You might want to handle or terminate the process here.
+});
