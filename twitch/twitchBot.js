@@ -85,7 +85,7 @@ class TwitchBot {
             await this.disconnect();
         }
         console.log('Connecting to Twitch...');
-        try{
+        
             this.client = new tmi.client(options);
             this.running = true;        
 
@@ -115,22 +115,23 @@ class TwitchBot {
             this.client.on('cheer', this.onTwitchBotCheerHandler);
                 
 
-            await this.client.connect();
+            await this.client.connect().catch((error) => {
+                console.error('Error connecting to Twitch:', error);
+                console.trace('Full stack trace:', error.stack);
+        
+                if (error.message === 'Not connected to server.') {
+                    console.error('The error occurred during the connection attempt.');
+                } else {
+                    console.error('Unknown error during the connection attempt.');
+                }
+        
+                process.exit(1); // Exit the process with an error code
+            });
             console.log('Connected to Twitch!');
-        } catch (error) {
-            console.error('Error connecting to Twitch:', error);
-            console.trace('Full stack trace:', error.stack);
-    
-            if (error.message === 'Not connected to server.') {
-                console.error('The error occurred during the connection attempt.');
-            } else {
-                console.error('Unknown error during the connection attempt.');
-            }
-    
-            process.exit(1); // Exit the process with an error code
-        }
-
+        
     }
+
+    
 
     async disconnect () {
         try {
