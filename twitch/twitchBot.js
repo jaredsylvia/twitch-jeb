@@ -116,6 +116,7 @@ class TwitchBot {
                 
 
             await this.client.connect();
+            console.log('Connected to Twitch!');
         } catch (error) {
             console.error(`error connecting to Twitch: ${error}`);
             console.trace(`Full stack trace: ${error.stack}`);
