@@ -87,6 +87,7 @@ class TwitchBot {
         console.log('Connecting to Twitch...');
         
             this.client = new tmi.client(options);
+            console.log('Twitch client created');
             this.running = true;        
 
             this.client.on('connected', this.onTwitchBotConnectedHandler);
@@ -113,7 +114,7 @@ class TwitchBot {
             this.client.on('submysterygift', this.onTwitchBotSubmysterygiftHandler);
 
             this.client.on('cheer', this.onTwitchBotCheerHandler);
-                
+            console.log('Twitch client event handlers set');
 
             await this.client.connect().catch((error) => {
                 console.error('Error connecting to Twitch:', error);
