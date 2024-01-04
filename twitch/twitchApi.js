@@ -12,6 +12,14 @@ class TwitchAPIClient {
         this.oauthToken = twitchOauthToken;
         this.refreshToken = twitchRefreshToken;
         this.userID = twitchUserID;
+        this.reauthorizing = false;
+        this.headers = {
+            'Client-ID': this.clientId,
+            'Authorization': `Bearer ${this.oauthToken}`
+        };
+        this.jsonHeaders = this.headers;
+        this.jsonHeaders['Content-Type'] = 'application/json';
+
     }
 
     setOauthToken(twitchOauthToken) {
@@ -25,326 +33,198 @@ class TwitchAPIClient {
     setUserID(twitchUserID) {
         this.userID = twitchUserID;
     }
-    
+
+    setHeaders() {
+        this.headers = {
+            'Client-ID': this.clientId,
+            'Authorization': `Bearer ${this.oauthToken}`
+        };
+        this.jsonHeaders = this.headers;
+        this.jsonHeaders['Content-Type'] = 'application/json';
+    }
+    // Function to handle api responses
+    async handleResponse(response) {
+        if (response.status !== 200) {
+            console.log(`Error: Twitch API returned status ${response.status}`);
+            console.log(`Error: ${response.statusText}`);
+            console.log(`Error: ${response.body}`);
+            if(response.status === 401 && this.reauthorizing === false) {
+                this.reauthorizing = true;                
+                await this.renewOauth().then(() => {
+                    return null;
+                });
+            } else if (this.reauthorizing === true) {
+                console.log('Already reauthorizing, please wait...');
+                return null;
+            }
+            return null;
+        }
+        const data = await response.json();
+        return data;
+    }
+
     // Functions to get data from Twitch API
     async getStreamData() {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before getting stream data.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/streams?user_id=${this.userID}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
-        });
-        
-        if (response.status !== 200) {
-            //console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-        
-        if (data.data.length === 0) {
-            //console.log(`User is not currently streaming`);
-            //console.log(data);
-            return null;
-        }
-
-        return data;
+            headers: this.headers
+        });               
+        return await this.handleResponse(response);
     }
 
     async getChannelData() {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before getting channel data.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${this.userID}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
-
-        if (response.status !== 200) {
-            //console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-        
-        if (data.data.length === 0) {
-            console.log(`User does not have a channel`);
-            return null;
-        }
-            
-        return data;
+        return await this.handleResponse(response);
     }
 
     async setGameTitle(gamename) {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before setting game title.');
+            return null;
+        }
         const lookupResponse = await fetch(`https://api.twitch.tv/helix/games?name=${gamename}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
         const gameData = await lookupResponse.json();
-        const gameID = gameData.data[0].id;
-
+        const gameID = gameData.data[0].id;        
+        headers['Content-Type'] = 'application/json';
+        
         const response = await fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${this.userID}`, {
             method: 'PATCH',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`,
-                'Content-Type': 'application/json'
-            },
+            headers: this.jsonHeaders,            
             body: JSON.stringify({
                 game_id: gameID
             })
         });
-
-        if (response.status !== 200 || response.status !== 204) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-        return data;
+        return await this.handleResponse(response);
     }
 
     async setStreamTitle(title) {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before setting stream title.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${this.userID}`, {
             method: 'PATCH',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`,
-                'Content-Type': 'application/json'
-            },
+            headers: this.jsonHeaders,
             body: JSON.stringify({
                 title: title
             })
         });
-
-        if (response.status !== 200 || response.status !== 204) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-        return data;
+        return await this.handleResponse(response);
     }    
 
     async getFollowerCount() {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before getting follower count.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.userID}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
-
-        if (response.status !== 200) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
         
-        if (data.total.length === 0) {
-            console.log(`User does not have any followers`);
-            return null;
-        }
-
-        return data.total;
+        return await ((await this.handleResponse(response))?.total || 0);
     }
 
     async getFollowers() {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before getting followers.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/users/followers?broadcaster_id=${this.userID}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
+        return await this.handleResponse(response);
     }
 
     async getSubscriberCount() {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before getting subscriber count.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/subscriptions?broadcaster_id=${this.userID}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
-
-        if (response.status !== 200) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-
-        if (data.total.length === 0) {
-            console.log(`User does not have any subscribers`);
-            return null;
-        }
-
-        return data.total;
+        return await ((await this.handleResponse(response))?.total || 0);
     }    
 
 
     async checkFollower(username) {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before checking follower.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/users/follows?to_id=${this.userID}&from_name=${username}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
-
-        if (response.status !== 200) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-        
-        if (data.total.length === 0) {
-            console.log(`User is not a follower`);
-            return null;
-        }
-
-        return data.total;
+        return await this.handleResponse(response);
     }
 
     async checkSubscriber(username) {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before checking subscriber.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/subscriptions?broadcaster_id=${this.userID}&user_id=${username}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
-
-        if (response.status !== 200) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-        
-        if (data.total.length === 0) {
-            console.log(`User is not a subscriber`);
-            return null;
-        }
-
-        return data.total;
+        return await this.handleResponse(response);
     }
 
     async checkModerator(username) {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before checking moderator.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/moderation/moderators?broadcaster_id=${this.userID}&user_id=${username}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
-
-        if (response.status !== 200) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-        
-        if (data.total.length === 0) {
-            console.log(`User is not a moderator`);
-            return null;
-        }
-
-        return data.total;
+        return await this.handleResponse(response);
     }
 
     async checkVIP(username) {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before checking VIP.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/moderation/vips?broadcaster_id=${this.userID}&user_id=${username}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
-
-        if (response.status !== 200) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-        
-        if (data.total.length === 0) {
-            console.log(`User is not a VIP`);
-            return null;
-        }
-
-        return data.total;
+        return await this.handleResponse(response);
     }
 
     async getViewerInfo(username) {
+        if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before getting viewer info.');
+            return null;
+        }
         const response = await fetch(`https://api.twitch.tv/helix/users?login=${username}`, {
             method: 'GET',
-            headers: {
-                'Client-ID': this.clientId,
-                'Authorization': `Bearer ${this.oauthToken}`
-            }
+            headers: this.headers
         });
-        
-        if (response.status !== 200) {
-            console.log(`Error: Twitch API returned status ${response.status}`);
-            if(response.status === 401) {
-                this.renewOauth();
-            }
-            return null;
-        }
-
-        const data = await response.json();
-        
-        if (data.data.length === 0) {
-            console.log(`User does not exist`);
-            return null;
-        }
-
-        return data;
+        return await this.handleResponse(response);
     }
 
-
-
-    async renewOauth() {
+    async renewOauth() {        
         const twitchTokenParams = new URLSearchParams({
             grant_type: 'refresh_token',
             refresh_token: this.refreshToken,
@@ -368,7 +248,8 @@ class TwitchAPIClient {
             this.refreshToken = data.refresh_token;
             const time = new Date().toLocaleTimeString();
             console.log(`Successfully renewed OAuth token at ${time}`);
-            
+            this.setHeaders();
+            this.reauthorizing = false;
             return data;
             }   
     }

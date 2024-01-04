@@ -292,3 +292,57 @@ td {
 .progress-text {
     overflow: visible;
 }
+
+/* Spinning prize wheel styles */
+#wheel-container {
+    margin: auto;
+    width: 50%;
+    padding: 10px;
+}
+
+#wheel {
+    display: none;
+    position: absolute;
+    top: 25%;
+    left: 25%;
+    width: 700px;
+    height: 700px;
+    transform: translateY(-50%);
+    background: conic-gradient(
+      #ff0000 0% 9.09%,       /* Red */
+      #ff4500 9.09% 18.18%,    /* Red-Orange */
+      #ffa500 18.18% 27.27%,   /* Orange */
+      #ffff00 27.27% 36.36%,   /* Yellow */
+      #008000 36.36% 45.45%,   /* Green */
+      #00cc66 45.45% 54.54%,   /* Shade of Green added */
+      #0000ff 54.54% 63.63%,   /* Blue */
+      #00ffff 63.63% 72.72%,   /* Cyan */
+      #4b0082 72.72% 81.81%,   /* Indigo */
+      #8b00ff 81.81% 90.9%,    /* Violet */
+      #ff00ff 90.9% 100%       /* Magenta */
+    );
+    border-radius: 50%;        
+    transform-origin: 50% 50%;
+    transition: transform 0.5s linear; /* Smooth animation transition */
+    z-index: 1; /* Ensure the alert is above the overlay */
+  }
+
+  #playerName {
+    display: none;
+    z-index: 2;
+    position: absolute;
+    top: 50%;
+    left: 50%;    
+    transform: translate(-50%, -50%);
+    color: black;
+    font-size: 64px;  
+}
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg); /* Start from 0 degrees */
+    }
+    to {
+      transform: rotate(360deg); /* Full rotation in 3 seconds */
+    }
+  }

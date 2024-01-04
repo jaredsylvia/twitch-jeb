@@ -25,43 +25,52 @@ class Roulette extends Command {
                 twitchbot.client.say(channel, `A game of roulette is already active!`);
                 return;
             }
-
+    
             this.rouletteActive = true;
             this.roulettePlayers = [];
             this.rouletteWinner = '';
             twitchbot.client.say(channel, `A game of roulette has started! Type !joinr to join the game.`);
-
+    
+            // Timeout for joining
             setTimeout(() => {
                 if (this.roulettePlayers.length === 0) {
                     twitchbot.client.say(channel, `Nobody joined the game!`);
                     this.rouletteActive = false;
                     return;
                 }
-
-                const winner = this.roulettePlayers[Math.floor(Math.random() * this.roulettePlayers.length)];
-                this.rouletteWinner = winner;
-                this.pool = parseInt(this.pool);
-                twitchbot.client.say(channel, `${winner} wins ${this.pool}!`);
-                this.rouletteActive = false;
-                this.db.addPoints(winner, this.pool);
-
-                this.roulettePlayerNames = '';
-                this.roulettePlayers.forEach(player => {
-                    this.roulettePlayerNames += player + ',';
-                });
-                twitchbot.client.say(channel, `Players: ${this.roulettePlayerNames.substring(0, this.roulettePlayerNames.length - 1)}`);
-                twitchbot.client.say(channel, `Winner: ${this.rouletteWinner}`);
-                
-                this.db.addRoulette(false, this.roulettePlayerNames.substring(0, this.roulettePlayerNames.length - 1), this.rouletteWinner, this.pool);
-                this.pool = 0;
-            }, 30000);
-
+    
+                // Announce that the spinning phase is starting
+                twitchbot.client.say(channel, `Spinning the roulette wheel!`);
+                this.wss.sendToWebSocket({ type: 'roulette', data: { players: this.roulettePlayers, spinning: 'start' } });
+                // Timeout for spinning
+                setTimeout(() => {
+                    const winner = this.roulettePlayers[Math.floor(Math.random() * this.roulettePlayers.length)];
+                    this.rouletteWinner = winner;
+                    this.pool = parseInt(this.pool);
+                    twitchbot.client.say(channel, `${winner} wins ${this.pool}!`);
+                    this.rouletteActive = false;
+                    this.db.addPoints(winner, this.pool);
+    
+                    this.roulettePlayerNames = '';
+                    this.roulettePlayers.forEach(player => {
+                        this.roulettePlayerNames += player + ',';
+                    });
+    
+                    twitchbot.client.say(channel, `Players: ${this.roulettePlayerNames.substring(0, this.roulettePlayerNames.length - 1)}`);
+                    twitchbot.client.say(channel, `Winner: ${this.rouletteWinner}`);
+    
+                    this.db.addRoulette(false, this.roulettePlayerNames.substring(0, this.roulettePlayerNames.length - 1), this.rouletteWinner, this.pool);
+                    this.pool = 0;
+                    this.wss.sendToWebSocket({ type: 'roulette', data: { winner: this.rouletteWinner, spinning: 'stop' } });
+                }, 10000); // 10 seconds for spinning
+            }, 30000); // 30 seconds for joining
         } catch (err) {
             console.log(err);
             twitchbot.client.say(channel, `${this.name}: ${this.description}`);
             twitchbot.client.say(channel, `Usage: ${this.usage}`);
         }
     }
+    
 
     async join(twitchbot, channel, args, userstate) {
         try {
@@ -94,6 +103,7 @@ class Roulette extends Command {
 
             this.roulettePlayers.push(userstate.username);
             twitchbot.client.say(channel, `@${userstate.username} has joined the game!`);
+            this.wss.sendToWebSocket({ type: 'roulette', data: { players: this.roulettePlayers } });
         }
         catch (err) {
             console.log(err);

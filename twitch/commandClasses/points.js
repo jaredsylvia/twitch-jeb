@@ -8,7 +8,9 @@ class Points extends Command {
         this.usage = '!points, !points username';
         this.aliases = ['points'];
         this.cooldown = 5;
-        this.subcommands = [];
+        this.subcommands = [ 'givepoints', 'addpoints'];
+        this.givepoints = this.givePoints;
+        this.addpoints = this.addPoints;
         this.execute = this.executePoints;
         this.db = db;
     }

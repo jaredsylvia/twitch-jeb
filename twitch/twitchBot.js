@@ -127,9 +127,7 @@ class TwitchBot {
                     console.error('The error occurred during the connection attempt.');
                 } else {
                     console.error('Unknown error during the connection attempt.');
-                }
-        
-                process.exit(1); // Exit the process with an error code
+                }               
             }
             console.log('Connected to Twitch!');
         
@@ -187,8 +185,15 @@ class TwitchBot {
         if(isCommand) {
             this.onCommand(channel, userstate, message);
         }
-             
 
+        // Get user from viewer table
+        const viewer = await this.db.getViewer(userstate.username);
+        
+        // Check if user has userid
+        if(viewer && !viewer.userid) {
+            console.log(`Adding userid ${userstate['user-id']} to ${userstate.username}`);
+            await this.db.setUserID(userstate.username, userstate['user-id']);
+            }
     }
 
     async onTwitchBotMessageDeletedHandler (channel, username, deletedMessage, userstate) {

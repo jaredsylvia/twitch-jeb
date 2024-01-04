@@ -1,8 +1,15 @@
 $(document).ready(() => {
     let ws = new WebSocket(`${webSocketAddress}`);
+    
     const hackerTextElement = $('#hacker-text');
+    
+    const wheel = $('#wheel');
+    let spinning = false;
+    let roulettePlayers = [];
+    
     let clips = [];
     let clipIndex = 0;
+    
     var urlRegex = /(https?:\/\/[^ ]*)/;
     
     function updateElement(selector, value) {
@@ -34,6 +41,11 @@ $(document).ready(() => {
         const minutes = Math.floor((seconds % 3600) / 60);
         const formattedTime = `${hours}h ${minutes}m`;
         return formattedTime;
+    }
+
+    function updateGauge(gauge, value) {
+        gauge.value = value;
+        gauge.update({ animationDuration: 1000 });
     }
 
     ws.onerror = (event) => {
@@ -205,15 +217,15 @@ $(document).ready(() => {
                 const estimatedTime = formatTime(printerJob.progress?.printTimeLeft || 0);
                 const elapsedTime = formatTime(printerJob.progress?.printTime || 0);
                 const totalTime = formatTime(printerJob.progress?.printTimeLeft + printerJob.progress?.printTime || 0);
-
+                
                 updateProgressBar('#printProgress', completionPercentage, elapsedTime, totalTime);
                 updateElement('#printerStatus', `Printer Status: ${printerStatus.state?.text || 'N/A'}`);
                 
                 updateElement('#estimatedTime', `Estimated Time: ${estimatedTime}`);
                 updateElement('#elapsedTime', `Elapsed Time: ${elapsedTime}`);
                 updateElement('#currentFile', `Current File: ${printerJob.job?.file?.display || 'N/A'}`);
-                updateElement('#hotendTemp', `Hotend Temperature: ${printerStatus.temperature?.tool0?.actual || 'N/A'}°C`);
-                updateElement('#bedTemp', `Bed Temperature: ${printerStatus.temperature?.bed?.actual || 'N/A'}°C`);
+                updateGauge(hotEndGauge, printerStatus.temperature?.tool0?.actual || 0);
+                updateGauge(bedGauge, printerStatus.temperature?.bed?.actual || 0);                
 
             break;
                 
@@ -243,30 +255,27 @@ $(document).ready(() => {
                 showAlert(alertMessage);
                 break;
             case 'roulette':
-                let rouletteActive = message.active;
-                let rouletteWinner = message.winner;
-                let roulettePlayers = message.players;
-                let roulettePool = message.pool;
-                console.log(message);
-                if(rouletteActive) {
-                    $('#rouletteStatus').text("Roulette Active. !join to join the game!");
-                } else if(!rouletteActive) {
-                    $('#rouletteStatus').text("No roulette active");
-                    $('#roulettePlayers').empty();
-                }
-                
-                if(rouletteWinner) {
-                    $('#rouletteWinner').text("Last roulette winner: " + rouletteWinner);
+                let spinControl = message.data.spinning;
+                let incomingPlayers = message.data.players;
+                if(spinControl == 'start') {
+                    console.log("start");                    
+                    startSpin();                    
+                    spinning = true;
+                } else if(spinControl == 'stop') {
+                    stopSpin();
+                    spinning = false;
                 }
 
-                if(roulettePlayers) {
-                    $('#roulettePlayers').text("Players: " + roulettePlayers);
+                if(incomingPlayers.length > 0) {
+                    roulettePlayers = incomingPlayers;
+                    console.log(`Incoming players: ${incomingPlayers}`);
+                    console.log(`Current players: ${roulettePlayers}`);
+                    
                 }
-                
-                if(roulettePool) {
-                    $('#roulettePool').text("Pool: " + roulettePool);
-                }
-                break;
+
+                console.log(message.data);
+            break;
+
             case 'coinflip':
                 let coinflipActive = message.active;
                 let coinflipWinner = message.firstWinner;
@@ -348,5 +357,155 @@ $(document).ready(() => {
         });
     }
     
+    var hotEndGauge = new RadialGauge({
+        renderTo: 'hot-end-gauge',
+        width: 120,
+        height: 120,
+        units: "°C",
+        title: "Hot End",
+        minValue: 0,
+        maxValue: 250,
+        majorTicks: [0, 50, 100, 150, 200, 250],
+        minorTicks: 5,
+        strokeTicks: true,
+        highlights: [
+            {"from": 0, "to": 100, "color": "rgba(255, 0, 0, 0.3)"},
+            {"from": 100, "to": 180, "color": "rgba(255, 255, 0, 0.3)"},
+            {"from": 180, "to": 220, "color": "rgba(0, 255, 0, 0.3)"},
+            {"from": 220, "to": 250, "color": "rgba(255, 255, 0, 0.3)"},
+            {"from": 250, "to": 300, "color": "rgba(255, 0, 0, 0.3)"}
+        ],
+        ticksAngle: 225,
+        startAngle: 67.5,
+        colorMajorTicks: "#ddd",
+        colorMinorTicks: "#ddd",
+        colorTitle: "#eee",
+        colorUnits: "#ccc",
+        colorNumbers: "#eee",
+        colorPlate: "#222",
+        borderShadowWidth: 0,
+        borders: true,
+        needleType: "arrow",
+        needleWidth: 2,
+        needleCircleSize: 7,
+        needleCircleOuter: true,
+        needleCircleInner: false,
+        animationDuration: 1500,
+        animationRule: "linear",
+        colorBorderOuter: "#333",
+        colorBorderOuterEnd: "#111",
+        colorBorderMiddle: "#222",
+        colorBorderMiddleEnd: "#111",
+        colorBorderInner: "#111",
+        colorBorderInnerEnd: "#333",
+        colorNeedleShadowDown: "#333",
+        colorNeedleCircleOuter: "#333",
+        colorNeedleCircleOuterEnd: "#111",
+        colorNeedleCircleInner: "#111",
+        colorNeedleCircleInnerEnd: "#222",
+        valueBoxBorderRadius: 0,
+        colorValueBoxRect: "#222",
+        colorValueBoxRectEnd: "#333"
+    }).draw();
+
+    var bedGauge = new RadialGauge({
+        renderTo: 'bed-gauge',
+        width: 120,
+        height: 120,
+        units: "°C",
+        title: "Bed Temperature",
+        minValue: 0,
+        maxValue: 100,
+        majorTicks: [0, 20, 40, 60, 80, 100],
+        minorTicks: 2,
+        strokeTicks: true,
+        highlights: [
+            {"from": 0, "to": 20, "color": "rgba(255, 0, 0, 0.3)"},
+            {"from": 20, "to": 40, "color": "rgba(255, 255, 0, 0.3)"},
+            {"from": 40, "to": 60, "color": "rgba(0, 255, 0, 0.3)"},
+            {"from": 60, "to": 80, "color": "rgba(255, 255, 0, 0.3)"},
+            {"from": 80, "to": 100, "color": "rgba(255, 0, 0, 0.3)"}
+        ],
+        ticksAngle: 225,
+        startAngle: 67.5,
+        colorMajorTicks: "#ddd",
+        colorMinorTicks: "#ddd",
+        colorTitle: "#eee",
+        colorUnits: "#ccc",
+        colorNumbers: "#eee",
+        colorPlate: "#222",
+        borderShadowWidth: 0,
+        borders: true,
+        needleType: "arrow",
+        needleWidth: 2,
+        needleCircleSize: 7,
+        needleCircleOuter: true,
+        needleCircleInner: false,
+        animationDuration: 1500,
+        animationRule: "linear",
+        colorBorderOuter: "#333",
+        colorBorderOuterEnd: "#111",
+        colorBorderMiddle: "#222",
+        colorBorderMiddleEnd: "#111",
+        colorBorderInner: "#111",
+        colorBorderInnerEnd: "#333",
+        colorNeedleShadowDown: "#333",
+        colorNeedleCircleOuter: "#333",
+        colorNeedleCircleOuterEnd: "#111",
+        colorNeedleCircleInner: "#111",
+        colorNeedleCircleInnerEnd: "#222",
+        valueBoxBorderRadius: 0,
+        colorValueBoxRect: "#222",
+        colorValueBoxRectEnd: "#333"
+    }).draw();
+
+    function startSpin() {
+        if (!spinning) {
+          spinning = true;
+          wheel.css('animation', 'spin 1s linear infinite');
+          wheel.show().slideUp(0).slideDown('slow');
+          $('#playerName').show();
+          startPlayerDisplay();          
+        }
+      }
+  
+      function stopSpin() {
+        if (spinning) {
+          spinning = false;
+            
+          const transformValue = wheel.css('transform');
+          const matrix = transformValue.match(/matrix\((.+)\)/);
+  
+          if (matrix) {
+            const matrixValues = matrix[1].split(', ');
+            const angle = Math.round(Math.atan2(parseFloat(matrixValues[1]), parseFloat(matrixValues[0])) * (180 / Math.PI));
+            currentRotation = (angle < 0) ? angle + 360 : angle; // Convert to positive angle
+          }
+  
+          wheel.css('animation', 'none'); // Stop spinning animation
+          wheel.css('transform', `rotate(${currentRotation}deg)`); // Set current rotation angle
+          $('#playerName').text('Fix Winner Variable');
+          setTimeout(function() {
+            wheel.slideUp('slow');
+            $('#playerName').hide();
+          }, 2000);
+        }
+      }
+
+      function startPlayerDisplay() {
+        let intervalId;
+        
+        intervalId = setInterval(function () {
+            const player = roulettePlayers[Math.floor(Math.random() * roulettePlayers.length)];
+            console.log(player);
+            $('#playerName').text(player);    
+            // Stop the interval if spinning is false
+            if (!spinning) {
+                clearInterval(intervalId);
+            }
+        }, 100);        
+    }
+
+
 
 });

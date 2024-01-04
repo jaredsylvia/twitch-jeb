@@ -85,7 +85,7 @@ app.get('/', (req, res) => {
 // Define a route for the Twitch OAuth flow
 app.get('/auth/twitch', (req, res) => {
     const redirectUri = `${serverBaseUrl}/auth/twitch/callback`;
-    const scope = 'channel:moderate+chat:edit+chat:read+channel:manage:broadcast+channel:read:subscriptions';
+    const scope = 'channel:moderate+chat:edit+chat:read+channel:manage:broadcast+channel:read:subscriptions+user:read:follows+moderator:read:followers';
 
     const state = Math.random().toString(36).substring(7); // Unique state parameter
     const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${state}`;
