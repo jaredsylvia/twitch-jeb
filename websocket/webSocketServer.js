@@ -1,10 +1,9 @@
 require('dotenv').config();
 const WebSocket = require('ws');
-const TwitchApi = require('../twitch/twitchApi.js');
 const OctoPrinter = require('../octopi/octoApi.js');
 
 class WebSocketServer {
-    constructor(server, twitchClientId, twitchOauthToken, twitchRefreshToken, twitchChannel, twitchUserID, db) {
+    constructor(server, twitchClientId, twitchOauthToken, twitchRefreshToken, twitchChannel, twitchUserID, db, twitchApiClient) {
         this.server = server;
         this.twitchClientId = twitchClientId;
         this.twitchOauthToken = twitchOauthToken;
@@ -12,10 +11,11 @@ class WebSocketServer {
         this.twitchChannel = twitchChannel;
         this.twitchUserID = twitchUserID;        
         this.wss = new WebSocket.Server({ server });
-        this.twitchApiClient = new TwitchApi(twitchOauthToken, null, twitchUserID);
+        this.twitchApiClient = twitchApiClient;
         this.octoPrinter = new OctoPrinter(process.env.OCTO_API, process.env.OCTO_URL);
         this.bits = 0;
         this.db = db;
+        this.disconnectCount = 0;
     }
 
     async setupWebSocketServer() {
@@ -56,6 +56,10 @@ class WebSocketServer {
 
     async setTwitchBot(twitchBotClient) {
         this.twitchBotClient = twitchBotClient;
+    }
+
+    async setTwichApiClient(twitchApiClient) {
+        this.twitchApiClient = twitchApiClient;
     }
 
     async filterDefinedProperties(obj) {
@@ -150,11 +154,10 @@ class WebSocketServer {
     }
 
     async onListening() {
-        console.log(`WebSocket server started and listening.`);
+        console.log(`WebSocket server started and listening.`);        
     }
 
     async onConnection(ws) {
-        console.log('WebSocket client connected');
         ws.on('message', this.onMessage.bind(this));
         ws.on('close', this.onClose.bind(this));
     }
@@ -255,7 +258,7 @@ class WebSocketServer {
     }
 
     async onClose() {
-        console.log('WebSocket client disconnected');        
+        this.disconnectCount++;
     }
 
     

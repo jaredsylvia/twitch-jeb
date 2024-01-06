@@ -74,41 +74,78 @@ class Roulette extends Command {
 
     async join(twitchbot, channel, args, userstate) {
         try {
-            const bet = args[1] ? args[1] : 0;
-            const points = await this.db.getPoints(userstate.username);
-
-            if (points < bet) {
-                twitchbot.client.say(channel, `@${userstate.username} doesn't have enough points!`);
-                return;
-            } else if (bet < 0) {
-                twitchbot.client.say(channel, `@${userstate.username} cannot bet a negative amount!`);
-                return;
-            } else if (bet === 0) {
-                twitchbot.client.say(channel, `@${userstate.username} must bet at least 1 point!`);
-                return;
-            } else {
-                await this.db.addPoints(userstate.username, -bet);
-                this.pool += bet;
-            }
-
             if (!this.rouletteActive) {
                 twitchbot.client.say(channel, `There is no game of roulette active!`);
+                twitchbot.client.say(channel, `Type !roulette to start a game.`);
                 return;
-            }
-
-            if (this.roulettePlayers.includes(userstate.username)) {
+            } else if (this.roulettePlayers.includes(userstate.username)) {
                 twitchbot.client.say(channel, `You are already in the game!`);
                 return;
             }
+            let bet = args[1] ? args[1] : 0;
+            let isNumber = /^\d+$/.test(bet);
+            let hasJoined = false;
+            const points = await this.db.getPoints(userstate.username);
+            if (isNumber) {
+                bet = parseInt(bet);
+            }            
+            switch (typeof bet) {
+                case 'string':
+                    switch (bet) {
+                        case 'all':
+                            bet = points;
+                            twitchbot.client.say(channel, `@${userstate.username} has bet all their points, a whopping ${bet}!`);
+                            hasJoined = true;
+                            break;
+                        case 'half':
+                            bet = Math.floor(points / 2);
+                            twitchbot.client.say(channel, `@${userstate.username} has bet half their points, totalling ${bet}!`);
+                            hasJoined = true;
+                            break;
+                        default:
+                            if(bet.includes('%')) {
+                                bet.slice(0, -1);
+                                bet = Math.floor(points * (parseInt(bet) / 100));
+                                twitchbot.client.say(channel, `@${userstate.username} has bet ${bet} points!`);
+                                hasJoined = true;
+                            } else {
+                                twitchbot.client.say(channel, `@${userstate.username} bet must be 'half', 'all', a percentage or a number!`);
+                                return;
+                            }
+                            break;                            
+                case 'number':
+                            if (bet === 0) {
+                                twitchbot.client.say(channel, `@${userstate.username} must bet at least 1 point!`);
+                                return;
+                            } else if (points < bet) {
+                                twitchbot.client.say(channel, `@${userstate.username} doesn't have enough points!`);
+                                return;
+                            } else if (bet < 0) {
+                                twitchbot.client.say(channel, `@${userstate.username} cannot bet a negative amount!`);
+                                return;
+                            } else {
+                                twitchbot.client.say(channel, `@${userstate.username} has bet ${bet} points!`);                                
+                                hasJoined = true;
+                            }                            
+                    }
+                    break;                    
+                default:
+                    twitchbot.client.say(channel, `@${userstate.username} bet must be 'half', 'all', a percentage or a number!`);
+                    return;
+            }
 
-            this.roulettePlayers.push(userstate.username);
-            twitchbot.client.say(channel, `@${userstate.username} has joined the game!`);
-            this.wss.sendToWebSocket({ type: 'roulette', data: { players: this.roulettePlayers } });
+            
+            if (hasJoined) {
+                twitchbot.client.say(channel, `@${userstate.username} has joined the game!`);
+                this.roulettePlayers.push(userstate.username);
+                await this.db.addPoints(userstate.username, -bet);
+                this.pool += parseInt(bet);
+                this.wss.sendToWebSocket({ type: 'roulette', data: { players: this.roulettePlayers } });
+            }            
         }
         catch (err) {
             console.log(err);
-            twitchbot.client.say(channel, `${this.subcommands[0].name}: ${this.subcommands[0].description}`);
-            twitchbot.client.say(channel, `Usage: ${this.subcommands[0].usage}`);
+            twitchbot.client.say(channel, `@${userstate.username} bet must be 'half', 'all', a percentage or a number!`);
         }
     }
 }

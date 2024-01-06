@@ -47,7 +47,7 @@ class TwitchAPIClient {
         if (response.status !== 200) {
             console.log(`Error: Twitch API returned status ${response.status}`);
             console.log(`Error: ${response.statusText}`);
-            console.log(`Error: ${response.body}`);
+                                   
             if(response.status === 401 && this.reauthorizing === false) {
                 this.reauthorizing = true;                
                 await this.renewOauth().then(() => {

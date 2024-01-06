@@ -92,6 +92,16 @@ class Database {
                     date DATETIME DEFAULT CURRENT_TIMESTAMP
                 )`);
 
+                this.db.run(`CREATE TABLE IF NOT EXISTS clips (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT NOT NULL UNIQUE,
+                    provider TEXT NOT NULL,
+                    submitter TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    played_last DATETIME,               
+                    date DATETIME DEFAULT CURRENT_TIMESTAMP
+                )`);
+
                 resolve();
             } catch (error) {
                 console.error(error);
@@ -767,7 +777,138 @@ class Database {
         }
     }
 
+    addClip(url, provider, submitter, title) {
+        try {
+            return new Promise((resolve, reject) => {
+                this.db.run(`INSERT INTO clips (url, provider, submitter, title) VALUES (?, ?, ?, ?)`, [url, provider, submitter, title], (err) => {
+                    if (err) {
+                        console.error(err.message);
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+        } catch (err) {
+            console.log(err);
+            return Promise.reject(err);
+        }
+    }
 
+    getClips() {
+        try {
+            return new Promise((resolve, reject) => {
+                this.db.all(`SELECT * FROM clips ORDER BY id DESC`, [], (err, rows) => {
+                    if (err) {
+                        console.error(err.message);
+                        reject(err);
+                    } else {
+                        resolve(rows);
+                    }                    
+                });
+            });
+        } catch (err) {
+            console.log(err);
+            return Promise.reject(err);
+        }
+    }
+
+    getClip(id) {       
+        try {
+            return new Promise((resolve, reject) => {
+                if (id === undefined) {
+                    this.db.get(`SELECT * FROM clips ORDER BY id DESC LIMIT 1`, [], (err, row) => {
+                        if (err) {
+                            console.error(err.message);
+                            reject(err);
+                        } else {
+                            resolve(row);
+                        }
+                    });
+                } else {
+                    this.db.get(`SELECT * FROM clips WHERE id = ?`, [id], (err, row) => {
+                        if (err) {
+                            console.error(err.message);
+                            reject(err);
+                        } else {
+                            resolve(row);
+                        }
+                    });
+                }
+            });
+        } catch (err) {
+            console.log(err);
+            return Promise.reject(err);
+        }
+    }
+
+    //get odldest clip that hasn't been played if no clips have been played, get oldest clip
+    getOldestClip() {
+        try {
+            return new Promise((resolve, reject) => {
+                this.db.get(`SELECT * FROM clips ORDER BY played_last ASC LIMIT 1`, [], (err, row) => {                    
+                    if (err) {
+                        console.error(err.message);
+                        reject(err);
+                    } else {
+                        if (row === undefined) {
+                            this.db.get(`SELECT * FROM clips ORDER BY id ASC LIMIT 1`, [], (err, row) => {
+                                if (err) {
+                                    console.error(err.message);
+                                    reject(err);
+                                } else {
+                                    this.playClip(row.id);
+                                    resolve(row);                                    
+                                }
+                            });
+                        } else {
+                            this.playClip(row.id);
+                            resolve(row);                            
+                        }
+                    }
+                });
+            });
+        } catch (err) {
+            console.log(err);
+            return Promise.reject(err);
+        }
+    }
+
+    deleteClip(id) {
+        try {
+            return new Promise((resolve, reject) => {
+                this.db.run(`DELETE FROM clips WHERE id = ?`, [id], (err) => {
+                    if (err) {
+                        console.error(err.message);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+        } catch (err) {
+            console.log(err);
+            return Promise.reject(err);
+        }
+    }
+
+    playClip(id) {
+        try {
+            return new Promise((resolve, reject) => {
+                this.db.run(`UPDATE clips SET played_last = CURRENT_TIMESTAMP
+                WHERE id = ?`, [id], (err) => {
+                    if (err) {
+                        console.error(err.message);
+                        reject(err);
+                        return;
+                    }
+                    resolve();
+                });
+            });
+        } catch (err) {
+            console.log(err);
+            return Promise.reject(err);
+        }        
+    }
 }
 
 module.exports = Database;

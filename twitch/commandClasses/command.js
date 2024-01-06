@@ -20,6 +20,14 @@ class Command {
         }
     }
 
+    checkIfVip(userstate) {
+        if(userstate.badges.vip === '1') {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     parseMessage(message) {
         const messageArray = message.split(' ');
         const command = messageArray.shift().toLowerCase();

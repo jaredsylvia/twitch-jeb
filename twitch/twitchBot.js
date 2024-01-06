@@ -12,6 +12,7 @@ const Roulette = require('./commandClasses/roulette.js');
 const Points = require('./commandClasses/points.js');
 const Goals = require('./commandClasses/goals.js');
 const Disclaimers = require('./commandClasses/disclaimers.js');
+const Clips = require('./commandClasses/clips.js');
 const standardCommands = new StandardCommands();
 
 // const commands = [];
@@ -162,6 +163,7 @@ class TwitchBot {
         this.commands.push(new Points(this.db));
         this.commands.push(new Goals(this.db));
         this.commands.push(new Disclaimers(this.db));    
+        this.commands.push(new Clips(this.db, this.wss));
     //  console.log(this.commands);
     }
     
@@ -173,6 +175,14 @@ class TwitchBot {
             message,
             self
         });
+        //check for url and extract it
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const url = message.match(urlRegex);
+        if(url) {
+            //send to clips command
+            console.log(message);
+            this.commands.find(command => command.name === 'Clips').addClip(this, channel, message, userstate);
+        }
         //count length of message, divide by 2 and round up to get points
         const points = Math.ceil(message.length / 3);
         

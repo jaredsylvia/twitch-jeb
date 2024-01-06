@@ -1,10 +1,10 @@
 // Load the things we need
 require('dotenv').config();
 const TwitchBot = require('./twitch/twitchBot.js');
+const TwitchApi = require('./twitch/twitchApi.js');
 
 const WebSocketServer = require('./websocket/webSocketServer.js');
 const Database = require('./db/db.js');
-
 
 const express = require('express');
 const fetch = require('node-fetch');
@@ -45,7 +45,7 @@ const twitchTokenUrl = 'https://id.twitch.tv/oauth2/token';
 let twitchOAuthToken;
 let twitchRefreshToken;
 let twitchBotClient;
-
+let twitchApiClient;
 // Connect to database
 let db = new Database(dbPath);
 
@@ -74,7 +74,7 @@ const server = app.listen(serverPort, serverIp, () => {
 });
 
 // Start the websocket server
-let wss = new WebSocketServer(server, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel, twitchUserID, db);
+let wss = new WebSocketServer(server, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel, twitchUserID, db, twitchApiClient);
 wss.setupWebSocketServer();
 
 // Define a route for the home page
@@ -136,23 +136,14 @@ app.get('/auth/twitch/callback', async (req, res) => {
         res.cookie('twitchRefreshToken', data.refresh_token, { path: '/', sameSite: 'None', httpOnly: false });
         res.cookie('twitchExpiry', data.expires_in, { path: '/', sameSite: 'None', httpOnly: false });
 
-        // Redirect to the dashboard
+        // Redirect to the dashboard page
         res.redirect('/dashboard');
+       
     } catch (error) {
         console.error('Error in Twitch OAuth callback:', error);
         res.status(500).send('Internal Server Error');
     }
 });
-
-
-
-// // Define a route for the logout page
-// app.get('/logout', (req, res) => {
-//     res.clearCookie('twitchOAuthToken');
-//     res.clearCookie('twitchRefreshToken');
-//     res.clearCookie('twitchExpiry');
-//     res.redirect('/');
-// });
 
 // Define a route for the logout page
 app.get('/logout', async (req, res) => {
@@ -195,9 +186,6 @@ app.get('/logout', async (req, res) => {
     }
 });
 
-
-
-
 // Define a route for the dashboard page
 app.get('/dashboard', (req, res) => {
     
@@ -214,13 +202,18 @@ app.get('/dashboard', (req, res) => {
         } 
         } catch (error) {
             twitchBotClient = new TwitchBot(twitchUsername, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchUserID, twitchChannel, wss, db);
+            twitchApiClient = new TwitchApi(twitchOAuthToken, twitchRefreshToken, twitchUserID);
+            
             wss.setTwitchBot(twitchBotClient);
+            wss.setTwichApiClient(twitchApiClient);
             wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel);
             twitchBotClient.setupCommands();
             twitchBotClient.connect();
         }
         
-        res.render('dashboard', { twitchUsername, twitchChannel, serverHost, webSocketAddress });
+        setTimeout(() => {
+            res.render('dashboard', { twitchUsername, twitchChannel, serverHost, webSocketAddress });
+        }, 1000);        
         
     } else {
         console.log('Redirecting to /auth/twitch');
@@ -229,7 +222,7 @@ app.get('/dashboard', (req, res) => {
 });
 
 // Define a route for overlay page
-app.get('/overlay', (req, res) => {
+app.get('/overlay', (req, res) => {    
     res.render('overlay', { twitchUsername, webSocketAddress });      
 });
 

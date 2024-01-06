@@ -6,6 +6,7 @@ $(document).ready(() => {
     const wheel = $('#wheel');
     let spinning = false;
     let roulettePlayers = [];
+    let rouletteWinner = '';
     
     let clips = [];
     let clipIndex = 0;
@@ -76,63 +77,6 @@ $(document).ready(() => {
                 $('#messages').append(messageHtml);
                 //Scroll to bottom of messages
                 $('#chatArea').animate({ scrollTop: $('#chatArea').prop('scrollHeight') }, 1000);
-                //If message contains a URL, extract it
-                if(messageText.match(urlRegex)) {
-                    let url = messageText.match(urlRegex)[0];
-                    //If URL is a clip, add it to the clips array
-                    
-                    //Twitch
-                    if(url.includes("twitch.tv")) {
-                        //extract slug from url
-                        let slug = url.split("/")[5];
-                        //add embed url to clips array
-                        clips.push(`https://clips.twitch.tv/embed?clip=${slug}&parent=${window.location.hostname}&autoplay=true&mute=false`);
-                                              
-                    }
-                    /*
-                    //Youtube
-                    if(url.includes("youtu.be")) {
-                        //extract slug from url
-                        let slug = url.split("/")[3];
-                        //add embed url to clips array
-                        clips.push(`https://www.youtube.com/embed/${slug}?autoplay=1&mute=0`);
-                    }
-                    if(url.includes("youtube.com")) {
-                        //extract slug from url
-                        let slug = url.split("/")[3];
-                        slug = slug.split("=")[1];
-                        //add embed url to clips array
-                        clips.push(`https://www.youtube.com/embed/${slug}?autoplay=1&mute=0`);
-                    }*/
-                }
-                //If user is mod, vip or broadcaster
-                if(message.userstate.mod || message.userstate.badges.vip || message.userstate.badges.broadcaster) {
-                    //If message contains !clip command make iframe visible and play clips in order
-                    if(messageText.includes("!clips")) {
-                        console.log(messageText);
-                        //if command is "clip play" make iframe visible and play clips in order
-                        if(messageText.includes("play")) {
-                            console.log(clips);
-                            $('#clip').css("visibility", "visible");
-                            $('#clip').attr("src", clips[clipIndex]);
-                            if(clipIndex >= clips.length) {
-                                clipIndex = 0;
-                                //stop playing clips and hide iframe
-                                $('#clip').attr("src", "");
-                                $('#clip').css("visibility", "hidden");
-                                clips = [];
-                            } else {
-                                clipIndex++;
-                            }                            
-                        }
-                        //if command is "clips stop" stop playing clips and hide iframe
-                        if(messageText.includes("stop")) {
-                            console.log(clips);
-                            $('#clip').css("visibility", "hidden");
-                            $('#clip').attr("src", "");
-                        }
-                    }                
-                }
                 break;
             case 'user':
                 console.log(message);
@@ -264,6 +208,7 @@ $(document).ready(() => {
                 } else if(spinControl == 'stop') {
                     stopSpin();
                     spinning = false;
+                    rouletteWinner = message.data.winner;
                 }
 
                 if(incomingPlayers.length > 0) {
@@ -311,6 +256,16 @@ $(document).ready(() => {
                     $('#coinflipTails').text("No one guessed tails.");
                 }
                 break;
+            case 'clip':
+                console.log(message);
+                if(message.data.visible) {
+                    $('#clip').attr('src', message.data.url);
+                    $('#clip').show();
+                } else {
+                    $('#clip').attr('src', '');
+                    $('#clip').hide();
+                }
+            break;
             default:
                 
             break;
@@ -484,8 +439,7 @@ $(document).ready(() => {
   
           wheel.css('animation', 'none'); // Stop spinning animation
           wheel.css('transform', `rotate(${currentRotation}deg)`); // Set current rotation angle
-          $('#playerName').text('Fix Winner Variable');
-          setTimeout(function() {
+        setTimeout(function() {
             wheel.slideUp('slow');
             $('#playerName').hide();
           }, 2000);
@@ -502,6 +456,7 @@ $(document).ready(() => {
             // Stop the interval if spinning is false
             if (!spinning) {
                 clearInterval(intervalId);
+                $('#playerName').text(rouletteWinner);
             }
         }, 100);        
     }
