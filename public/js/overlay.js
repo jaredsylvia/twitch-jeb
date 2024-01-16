@@ -13,6 +13,7 @@ $(document).ready(() => {
     let commandQueue = ['koth', 'roulette', 'trivia', 'coinflip'];
     let gaming = false;
     let gameActive = false;
+    let gameCount = 0;
 
     if(Hls.isSupported()) {
         var hls = new Hls();
@@ -186,12 +187,15 @@ $(document).ready(() => {
                 updateGauge(hotEndGauge, printerStatus.temperature?.tool0?.actual || 0);
                 updateGauge(bedGauge, printerStatus.temperature?.bed?.actual || 0);
                 
-                //Check if game is active and gaming is true
-                console.log(gaming);
-                console.log(gameActive);
+                //Check if game is active and gaming is true                
                 if(gaming == true && gameActive == false) {
-                    let command = commandQueue[Math.floor(Math.random() * commandQueue.length)];
-                    ws.send(JSON.stringify({ type : 'command', command : command }));
+                    if(gameCount == 5) {
+                        let command = commandQueue[Math.floor(Math.random() * commandQueue.length)];
+                        ws.send(JSON.stringify({ type : 'command', command : command }));
+                        gameCount = 0;
+                    } else {
+                        gameCount++;
+                    }
                 }
 
             break;

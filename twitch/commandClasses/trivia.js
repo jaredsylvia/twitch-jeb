@@ -129,14 +129,13 @@ class Trivia extends Command {
     }
 
     // if nobody guesses correctly after 30 seconds, reveal answer - needs to be cancellable
-    async triviaTimer(twitchbot, channel, args, userstate) {
-        console.log(Command.gameActive);      
+    async triviaTimer(twitchbot, channel, args, userstate) {        
         try {
             if(!Command.gameActive) {
-                console.log('Trivia is not active!');
+                
                 return;
             } else {
-                console.log('Time\'s up!');                
+                
                 const answer = this.answers.find(answer => answer.correct);
                 twitchbot.client.say(channel, `Time's up! The answer was ${answer.answer}`);
                 Command.gameActive = false;

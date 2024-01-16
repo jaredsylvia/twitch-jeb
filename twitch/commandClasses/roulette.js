@@ -26,6 +26,7 @@ class Roulette extends Command {
             }
     
             Command.gameActive = true;
+            this.wss.sendToWebSocket({ type: 'roulette', active: Command.gameActive });
             this.roulettePlayers = [];
             this.rouletteWinner = '';
             twitchbot.client.say(channel, `A game of roulette has started! Type !joinr to join the game.`);
