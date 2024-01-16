@@ -6,7 +6,7 @@ const twitchClientId = process.env.TWITCH_CLIENT_ID;
 const twitchSecret = process.env.TWITCH_SECRET;
 
 class TwitchAPIClient {
-    constructor(twitchOauthToken, twitchRefreshToken, twitchUserID) {
+    constructor(twitchOauthToken, twitchRefreshToken, twitchUserID, db) {
         this.clientId = twitchClientId;
         this.secret = twitchSecret;
         this.oauthToken = twitchOauthToken;
@@ -19,6 +19,8 @@ class TwitchAPIClient {
         };
         this.jsonHeaders = this.headers;
         this.jsonHeaders['Content-Type'] = 'application/json';
+        this.db = db;
+        this.viewersMessaged = new Set();
 
     }
 
@@ -47,7 +49,7 @@ class TwitchAPIClient {
         if (response.status !== 200) {
             console.log(`Error: Twitch API returned status ${response.status}`);
             console.log(`Error: ${response.statusText}`);
-                                   
+
             if(response.status === 401 && this.reauthorizing === false) {
                 this.reauthorizing = true;                
                 await this.renewOauth().then(() => {
@@ -63,6 +65,15 @@ class TwitchAPIClient {
         return data;
     }
 
+    //Function to validate oauth token
+    async validateOauthToken() {
+        const response = await fetch("https://id.twitch.tv/oauth2/validate", {
+            method: 'GET',
+            headers: this.headers
+        });
+        return await this.handleResponse(response);
+    }
+
     // Functions to get data from Twitch API
     async getStreamData() {
         if(this.reauthorizing === true) {
@@ -72,8 +83,13 @@ class TwitchAPIClient {
         const response = await fetch(`https://api.twitch.tv/helix/streams?user_id=${this.userID}`, {
             method: 'GET',
             headers: this.headers
-        });               
-        return await this.handleResponse(response);
+        });
+        const streamData = await this.handleResponse(response);
+        
+        if(streamData && streamData.type === 'live' && streamData.data.length > 0) {
+            this.viewersMessaged.clear();
+        }
+        return streamData;        
     }
 
     async getChannelData() {
@@ -222,6 +238,30 @@ class TwitchAPIClient {
             headers: this.headers
         });
         return await this.handleResponse(response);
+    }
+
+    async setVip(userid, isVip) {
+        let response;
+        /*if(this.reauthorizing === true) {
+            console.log('Reauthorizing, please wait before setting VIP.');
+            return null;
+        }
+        if(isVip) {
+            response = await fetch(`https://api.twitch.tv/helix/channels/vips?broadcaster_id=${this.userID}&user_id=${userid}`, {
+                method: 'POST',
+                headers: this.headers
+            });
+            this.db.setVip(userid, true);
+        } else {
+            response = await fetch(`https://api.twitch.tv/helix/channels/vips?broadcaster_id=${this.userID}&user_id=${userid}`, {
+                method: 'DELETE',
+                headers: this.headers
+            });
+            this.db.setVip(userid, false);
+        }*/
+        this.db.setVip(userid, isVip);
+        //return await this.handleResponse(response);
+        return;
     }
 
     async renewOauth() {        

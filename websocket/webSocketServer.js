@@ -1,6 +1,7 @@
 require('dotenv').config();
 const WebSocket = require('ws');
 const OctoPrinter = require('../octopi/octoApi.js');
+const Command = require('../twitch/commandClasses/command.js');
 
 class WebSocketServer {
     constructor(server, twitchClientId, twitchOauthToken, twitchRefreshToken, twitchChannel, twitchUserID, db, twitchApiClient) {
@@ -15,7 +16,7 @@ class WebSocketServer {
         this.octoPrinter = new OctoPrinter(process.env.OCTO_API, process.env.OCTO_URL);
         this.bits = 0;
         this.db = db;
-        this.disconnectCount = 0;
+        this.disconnectCount = 0;   
     }
 
     async setupWebSocketServer() {
@@ -33,7 +34,7 @@ class WebSocketServer {
                 // If data is a promise, await its resolution
                 data = await data;
             }
-    
+
             this.wss.clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify(data));
@@ -76,7 +77,6 @@ class WebSocketServer {
 
     async handleGetInfo() {
         try {
-            
             const [
                 streamData,
                 channelData,
@@ -95,10 +95,10 @@ class WebSocketServer {
                 mostRecentViewer,
                 [printerStatus, printerJob],
             ] = await Promise.all([
-                this.twitchApiClient.getStreamData(),
-                this.twitchApiClient.getChannelData(),
-                this.twitchApiClient.getFollowerCount(),
-                this.twitchApiClient.getSubscriberCount(),
+                await this.twitchApiClient.getStreamData(),
+                await this.twitchApiClient.getChannelData(),
+                await this.twitchApiClient.getFollowerCount(),
+                await this.twitchApiClient.getSubscriberCount(),
                 this.bits,
                 this.db.getKOTH(),
                 this.db.getRoulette(),
@@ -148,6 +148,7 @@ class WebSocketServer {
                 await this.db.addPoints(viewer.username, 10);
                 
             }
+            
         } catch (error) {
             console.error(`Error in data retrieval: ${error}`);
         }
@@ -250,7 +251,21 @@ class WebSocketServer {
                 } catch (error) {
                     console.error(`Error in data retrieval: ${error}`);
                 }
-                break;                
+                break;
+            case 'updateVIP':
+                try {
+                    this.twitchBotClient.updateVIP(parsedMessage.username, parsedMessage.action);
+                } catch (error) {
+                    console.error(`Error in data retrieval: ${error}`);
+                }
+                break;
+            case 'command':
+                try {
+                    this.twitchBotClient.client.say(this.twitchChannel, `!${parsedMessage.command}`);
+                } catch (error) {
+                    console.error(`Error in data retrieval: ${error}`);
+                }
+                break;
             default:
                 break;
         }

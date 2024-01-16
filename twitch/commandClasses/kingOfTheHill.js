@@ -9,7 +9,7 @@ class KingOfTheHill extends Command {
         this.description = 'Starts a king of the hill game.';
         this.usage = '!koth starts a king of the hill game, !joink joins the game.';
         this.subcommands = ['joink'];
-        this.kothActive = false;
+        
         this.kothPlayers = [];
         this.kothWinner = '';
         this.execute = this.startKoth;
@@ -20,17 +20,18 @@ class KingOfTheHill extends Command {
 
     startKoth(twitchbot, channel, args, userstate) {
         try {
-            if (this.kothActive) {
-                twitchbot.client.say(channel, `A king of the hill game is already active!`);
+            if(Command.gameActive) {
+                twitchbot.client.say(channel, `A game is already active!`);
                 return;
-            }
+            }           
 
-            this.kothActive = true;
+            Command.gameActive = true;
+            
             this.kothPlayers = [];
             this.kothWinner = '';
             const data = {
                 type: 'koth',
-                active: this.kothActive,
+                active: Command.gameActive,
             }
             this.wss.sendToWebSocket(data);
             twitchbot.client.say(channel, `A king of the hill game has started! Type !joink to join the game.`);
@@ -38,7 +39,8 @@ class KingOfTheHill extends Command {
             setTimeout(() => {
                 if (this.kothPlayers.length === 0) {
                     twitchbot.client.say(channel, `Nobody joined the game!`);
-                    this.kothActive = false;
+                    Command.gameActive = false;
+                    this.wss.sendToWebSocket({ type: 'koth', active: Command.gameActive });                    
                     return;
                 }
 
@@ -46,10 +48,10 @@ class KingOfTheHill extends Command {
                 this.kothWinner = winner;
 
                 twitchbot.client.say(channel, `The winner is ${winner}!`);
-                this.kothActive = false;
+                Command.gameActive = false;                
                 const data = {
                     type: 'koth',
-                    active: this.kothActive,
+                    active: Command.gameActive,
                     winner: this.kothWinner
                 }
                 this.wss.sendToWebSocket(data);
@@ -59,7 +61,7 @@ class KingOfTheHill extends Command {
                     this.kothPlayerNames += player + ',';
                 });         
 
-                this.db.addKOTH(this.kothActive, this.kothPlayerNames, this.kothWinner)
+                this.db.addKOTH(Command.gameActive, this.kothPlayerNames, this.kothWinner)
             }, 30000);
         } catch (err) {
             console.log(err);
@@ -70,7 +72,7 @@ class KingOfTheHill extends Command {
 
     join(twitchbot, channel, args, userstate) {
         try {
-            if (!this.kothActive) {
+            if (!Command.gameActive) {
                 twitchbot.client.say(channel, `There is no king of the hill game active!`);
                 return;
             }
@@ -84,7 +86,7 @@ class KingOfTheHill extends Command {
             twitchbot.client.say(channel, `${userstate.username} has joined the game!`);
             const data = {
                 type: 'koth',
-                active: this.kothActive,
+                active: Command.gameActive,
                 players: this.kothPlayers
             }
             this.wss.sendToWebSocket(data);

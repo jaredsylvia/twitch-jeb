@@ -1,6 +1,5 @@
 require('dotenv').config();
 const tmi = require('tmi.js');
-const TwitchApi = require('./twitchApi.js');
 
 const CoinFlipCommand = require('./commandClasses/coinFlipCommand.js');
 const StandardCommands = require('./commandClasses/standardCommands.js');
@@ -13,20 +12,12 @@ const Points = require('./commandClasses/points.js');
 const Goals = require('./commandClasses/goals.js');
 const Disclaimers = require('./commandClasses/disclaimers.js');
 const Clips = require('./commandClasses/clips.js');
+const Trivia = require('./commandClasses/trivia.js');
 const standardCommands = new StandardCommands();
 
-// const commands = [];
-// standardCommands.getAllCommands().forEach(command => {
-//     commands.push(command);
-// });
-// commands.push(new DiceRoll());
-// commands.push(new KingOfTheHill(db));
-// commands.push(new CoinFlipCommand());
-// commands.push(new Lurkers());
-// console.log(commands);
 
 class TwitchBot {
-    constructor (username, twitchClientId, twitchOauthToken, twitchRefreshToken, twitchUserID, channel, wss, db) {
+    constructor (username, twitchClientId, twitchOauthToken, twitchRefreshToken, twitchUserID, channel, wss, db, twitchApiClient) {
         this.username = username;
         this.twitchClientId = twitchClientId;
         this.oauthToken = twitchOauthToken;
@@ -36,9 +27,9 @@ class TwitchBot {
         this.wss = wss;
         this.db = db;        
         this.coinFlipCommand = null;
-        this.twitchApiClient = new TwitchApi(twitchOauthToken, null, twitchUserID);
+        this.twitchApiClient = twitchApiClient;
         this.commands = [];
-        this.running = false;
+        this.running = false;        
 
         this.onTwitchBotConnectedHandler = this.onTwitchBotConnectedHandler.bind(this);
         this.onTwitchBotDisconnectedHandler = this.onTwitchBotDisconnectedHandler.bind(this);
@@ -65,6 +56,8 @@ class TwitchBot {
 
         this.onTwitchBotCheerHandler = this.onTwitchBotCheerHandler.bind(this);
 
+        this.tenMinuteInterval = null;
+
         console.log('TwitchBot instantiated');
     }
 
@@ -79,11 +72,16 @@ class TwitchBot {
             password: this.oauthToken
         },
             channels: [ this.channel ]
-        };
-                
+        };        
+
         //check if client is already connected
-        if(this.client) {
+        if(this.client) {            
             await this.disconnect();
+            if(typeof this.tenMinuteInterval !== 'undefined') {
+                clearInterval(this.tenMinuteInterval);        
+            }
+            
+            
         }
         console.log('Connecting to Twitch...');
         
@@ -120,6 +118,10 @@ class TwitchBot {
             try {
                 await this.client.connect();
                 console.log('Connected to Twitch!');
+                // 10 minute interval
+                this.tenMinuteInterval = setInterval(async () => {
+                    await this.updateVips();
+                }, 600000);  
             } catch (error) {
                 console.error('Error connecting to Twitch:', error);
                 console.trace('Full stack trace:', error.stack);
@@ -130,15 +132,18 @@ class TwitchBot {
                     console.error('Unknown error during the connection attempt.');
                 }               
             }
-            console.log('Connected to Twitch!');
-        
-    }
+        }
 
     
 
     async disconnect () {
         try {
         await this.client.disconnect();
+        if(typeof this.tenMinuteInterval !== 'undefined') {
+            clearInterval(this.tenMinuteInterval);        
+        }
+        this.running = false;
+        this.db.setAllNotViewingNow();        
         } catch (error) {
             console.log(error);
         }
@@ -148,6 +153,8 @@ class TwitchBot {
     async updateWss (wss) {
         this.wss = wss;
     }
+
+    
     
     async setupCommands () {
         
@@ -164,6 +171,7 @@ class TwitchBot {
         this.commands.push(new Goals(this.db));
         this.commands.push(new Disclaimers(this.db));    
         this.commands.push(new Clips(this.db, this.wss));
+        this.commands.push(new Trivia(this.wss));
     //  console.log(this.commands);
     }
     
@@ -175,6 +183,15 @@ class TwitchBot {
             message,
             self
         });
+        // add viewer to viewersMessaged set if not already in it
+        if(!this.twitchApiClient.viewersMessaged.has(userstate.username)) {
+            this.twitchApiClient.viewersMessaged.add(userstate.username);
+            this.wss.sendToWebSocket({ type: 'alert', message: `Welcome to the stream ${userstate.username}`});
+            await this.db.setViewingNow(userstate.username, true);
+        } else {
+            
+        }
+
         //check for url and extract it
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         const url = message.match(urlRegex);
@@ -245,8 +262,7 @@ class TwitchBot {
         const viewer = await this.db.getViewer(username);
         if(!viewer) {
             await this.db.addViewer(username);
-        } else {
-            await this.db.setViewingNow(username, true);
+        } else {            
             await this.db.setLastSeen(username, new Date());            
         }
     }
@@ -443,6 +459,15 @@ class TwitchBot {
         this.oauthToken = twitchOauthToken;
         this.connect(); 
     }
+
+    // get top3 viewers and set to VIP
+    async updateVips () {
+        const viewers = await this.db.getTop3Viewers();
+        viewers.forEach(async viewer => {            
+            this.twitchApiClient.setVip(viewer.userid, true);            
+        });
+    }
+    
 
 }
 

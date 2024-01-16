@@ -1,5 +1,6 @@
 
 class Command {
+    static gameActive = false;
     constructor(name, description, aliases, usage, cooldown, execute, subcommands, wss, db) {
         this.name = name;
         this.description = description;
@@ -9,7 +10,7 @@ class Command {
         this.execute = execute;
         this.subcommands = subcommands;
         this.wss = wss;
-        this.db = db;
+        this.db = db;        
     }
 
     checkIfMod(userstate) {

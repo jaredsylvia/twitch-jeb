@@ -27,7 +27,7 @@ class DiceRoll extends command {
                 total += roll;
             });
 
-            twitchbot.client.say(channel, `You rolled ${total}!`);
+            twitchbot.client.say(channel, `${userstate.username} rolled ${total}!`);
         } catch (err) {
             twitchbot.client.say(channel, `${this.name}: ${this.description}`);
             twitchbot.client.say(channel, `Usage: ${this.usage}`);

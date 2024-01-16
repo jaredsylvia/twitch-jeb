@@ -42,7 +42,7 @@ class Disclaimers extends Command {
             const name = args[0];
             const message = args[1];
             await this.db.addDisclaimer(name, message);
-            //console.log(await this.db.addQuote(quote, author));
+            
             twitchbot.client.say(channel, `Disclaimer added! Disclaimer ${name}`);
             
         } catch (err) {

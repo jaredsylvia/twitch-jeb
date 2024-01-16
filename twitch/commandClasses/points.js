@@ -60,6 +60,9 @@ class Points extends Command {
             try {
                 const username = args[1];
                 const points = args[2];
+                if(points < 0) {
+                    points = 1; 
+                }
                 await this.db.addPoints(username, points);
                 twitchbot.client.say(channel, `@${username} has been given ${points} points!`);
             } catch (err) {

@@ -2,8 +2,7 @@ const Command = require('./command.js');
 
 class CoinFlipCommand extends Command {
     constructor(db, wss) {
-        super();  
-        this.flipping = false;
+        super();          
         this.headsGuesses = [];
         this.tailsGuesses = [];
         this.winningCoin = '';
@@ -24,8 +23,12 @@ class CoinFlipCommand extends Command {
    
 
     flip(twitchbot, channel, args, userstate) {
-        this.flipping = true;
-
+        if(Command.gameActive) {
+            twitchbot.client.say(channel, `A game is already active!`);
+            return;
+        }
+        Command.gameActive = true;        
+        this.wss.sendToWebSocket({ type: 'coinflip', active: Command.gameActive });
         twitchbot.client.say(channel, `@${userstate.username} wants to flip a coin! Type !heads or !tails to guess!`);
         
         // Give people time to respond using !heads or !tails
@@ -45,7 +48,8 @@ class CoinFlipCommand extends Command {
                 this.headsGuesses = [];
                 this.tailsGuesses = [];
                 this.winningCoin = '';
-                this.flipping = false;
+                Command.gameActive = false;
+                this.wss.sendToWebSocket({ type: 'coinflip', active: Command.gameActive });           
             }, 22000);
     
         }, 2000);
@@ -67,7 +71,7 @@ class CoinFlipCommand extends Command {
                 return;
             }
 
-            if (this.flipping) {
+            if (Command.gameActive) {
                 const username = userstate.username;
                 if (this.headsGuesses.includes(username) || this.tailsGuesses.includes(username)) {
                     twitchbot.client.say(channel, `@${username} you have already guessed!`);

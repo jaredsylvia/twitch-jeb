@@ -7,11 +7,21 @@ $(document).ready(() => {
     let spinning = false;
     let roulettePlayers = [];
     let rouletteWinner = '';
-    
-    let clips = [];
-    let clipIndex = 0;
-    
-    var urlRegex = /(https?:\/\/[^ ]*)/;
+
+    let videoOne = $('#videoOne');
+
+    let commandQueue = ['koth', 'roulette', 'trivia', 'coinflip'];
+    let gaming = false;
+    let gameActive = false;
+
+    if(Hls.isSupported()) {
+        var hls = new Hls();
+        hls.loadSource('https://tv.joeerror.com/stream/channelnumber/3.1');
+        hls.attachMedia($('#video')[0]);
+        hls.on(Hls.Events.MANIFEST_PARSED,function() {
+            videoOne.play();
+        });
+    }
     
     function updateElement(selector, value) {
         const element = $(selector);
@@ -55,7 +65,7 @@ $(document).ready(() => {
 
     ws.onopen = () => {
         console.log('WebSocket client connected');
-        ws.send(JSON.stringify({ type : 'getInfo' }));
+        //ws.send(JSON.stringify({ type : 'getInfo' }));
     };
 
     ws.onclose = () => {
@@ -65,9 +75,16 @@ $(document).ready(() => {
 
     ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
-
+        if(message.active){
+            gameActive = message.active;
+        }
         switch (message.type) {
             case 'message':
+                if(message.message == '!gameOn') {
+                    gaming = true;                    
+                } else if(message.message == '!gameOff') {
+                    gaming = false;
+                }                
                 //Create chat message in <p> tag
                 let username = message.userstate['display-name'];
                 let color = message.userstate.color;
@@ -113,8 +130,6 @@ $(document).ready(() => {
                 console.log(message);
                 break;
             case 'info':
-                console.log(message);
-            
                 // Update information on page
                 updateElement('#game', message.stream?.channel?.data?.[0]?.game_name);
                 updateElement('#title', message.stream?.channel?.data?.[0]?.title);
@@ -169,11 +184,20 @@ $(document).ready(() => {
                 updateElement('#elapsedTime', `Elapsed Time: ${elapsedTime}`);
                 updateElement('#currentFile', `Current File: ${printerJob.job?.file?.display || 'N/A'}`);
                 updateGauge(hotEndGauge, printerStatus.temperature?.tool0?.actual || 0);
-                updateGauge(bedGauge, printerStatus.temperature?.bed?.actual || 0);                
+                updateGauge(bedGauge, printerStatus.temperature?.bed?.actual || 0);
+                
+                //Check if game is active and gaming is true
+                console.log(gaming);
+                console.log(gameActive);
+                if(gaming == true && gameActive == false) {
+                    let command = commandQueue[Math.floor(Math.random() * commandQueue.length)];
+                    ws.send(JSON.stringify({ type : 'command', command : command }));
+                }
 
             break;
                 
             case 'koth':
+                gameActive = message.active;
                 let kothActive = message.active;
                 let kothWinner = message.winner;
                 let kothPlayers = message.players;
@@ -222,6 +246,7 @@ $(document).ready(() => {
             break;
 
             case 'coinflip':
+                gameActive = message.active;
                 let coinflipActive = message.active;
                 let coinflipWinner = message.firstWinner;
                 let winningCoin = message.winningCoin;
@@ -266,6 +291,34 @@ $(document).ready(() => {
                     $('#clip').hide();
                 }
             break;
+            case 'trivia':
+                console.log(message);
+                gameActive = message.active;
+                let triviaActive = message.active;
+                let triviaQuestion = message.question;
+                let triviaAnswers = message.answers;
+                let triviaCategory = message.category;
+                let triviaDifficulty = message.difficulty;
+
+                if(triviaActive) {                    
+                    updateElement('#triviaCategory', "Category: " + triviaCategory);
+                    updateElement('#triviaDifficulty', "Difficulty: " + triviaDifficulty);
+                    updateElement('#triviaQuestion', "Question: " + triviaQuestion);
+                    $('#triviaAnswers').empty();
+                    triviaAnswers.forEach(answer => {
+                        $('#triviaAnswers').append(`<p>${answer.letter}: ${answer.answer}</p>`);
+                    });
+                    $('#trivia').slideDown('slow');         
+                } else if(!triviaActive && message.winner) {
+                    $('#trivia').slideUp('slow');
+                    updateElement('#triviaCategory', "");
+                    updateElement('#triviaDifficulty', "");
+                    updateElement('#triviaQuestion', "");
+                    updateElement('#triviaAnswers', "");                                        
+                    const alertMessage = message.winner + " has won trivia!<br>The answer was: " + message.answer;
+                    showAlert(alertMessage);                    
+                }
+            break;
             default:
                 
             break;
@@ -303,7 +356,8 @@ $(document).ready(() => {
     function showAlert(message) {
         var alertElement = $("#customAlert");
 
-        alertElement.text(message);
+        alertElement.html(message);
+        //alertElement.text(message);
         alertElement.slideDown(500, function () {
             setTimeout(function () {
                 alertElement.slideUp(500);
@@ -458,8 +512,10 @@ $(document).ready(() => {
                 clearInterval(intervalId);
                 $('#playerName').text(rouletteWinner);
             }
-        }, 100);        
+        }, 100);
     }
+
+
 
 
 

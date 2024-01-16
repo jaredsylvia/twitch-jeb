@@ -161,6 +161,23 @@ class Database {
         }
     }
 
+    getTop3Viewers() {
+        try {
+            return new Promise((resolve, reject) => {
+                this.db.all(`SELECT * FROM viewers WHERE userid is NOT NULL ORDER BY points DESC LIMIT 3`, [], (err, rows) => {
+                    if (err) {
+                        console.error(err.message);
+                        reject(err);
+                    }
+                    resolve(rows);
+                });
+            });
+        } catch (err) {
+            console.log(err);
+            return Promise.reject(err);
+        }
+    }
+
     getMostRecentViewer() {
         try {
             return new Promise((resolve, reject) => {
@@ -362,7 +379,7 @@ class Database {
         }
     }
 
-    setVIP(username, isVIP) {
+    setVip(username, isVIP) {
         try {
             return new Promise((resolve, reject) => {
                 this.db.run(`UPDATE viewers SET isVIP = ?
@@ -443,7 +460,7 @@ class Database {
         try {
             return new Promise((resolve, reject) => {
                 this.db.run(`UPDATE viewers SET points = points + ?
-                WHERE username = ?`, [points, username], (err) => {
+                WHERE username = ?`, [parseInt(points), username], (err) => {
                     if (err) {
                         console.error(err.message);
                         reject(err);
@@ -488,6 +505,29 @@ class Database {
                 try {
                     this.db.run(`UPDATE viewers SET viewing_now = ?
                     WHERE username = ?`, [viewing_now, username], (err) => {
+                        if (err) {
+                            console.error(err.message);
+                            reject(err);
+                            return;
+                        }
+                        resolve();
+                    });
+                } catch (err) {
+                    console.log(err);
+                    reject(err);
+                }
+                });
+            } catch (err) {
+                console.log(err);
+                return Promise.reject(err);
+            }
+    }
+
+    setAllNotViewingNow() {
+        try {
+            return new Promise((resolve, reject) => {
+                try {
+                    this.db.run(`UPDATE viewers SET viewing_now = FALSE`, [], (err) => {
                         if (err) {
                             console.error(err.message);
                             reject(err);

@@ -16,10 +16,7 @@ class Goals extends Command {
 
     async executeGoal(twitchbot, channel, args, userstate) {
         try {
-            if(!this.checkIfMod(userstate)) {
-                twitchbot.client.say(channel, `You don't have permission to do that!`);
-                return;
-            }
+            if(!this.checkIfMod(userstate)) throw new Error('You are not a mod!');
             const type = args[1];
             const amount = args[2];
             await this.db.addGoal(type, amount);

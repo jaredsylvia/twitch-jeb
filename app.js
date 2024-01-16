@@ -85,7 +85,7 @@ app.get('/', (req, res) => {
 // Define a route for the Twitch OAuth flow
 app.get('/auth/twitch', (req, res) => {
     const redirectUri = `${serverBaseUrl}/auth/twitch/callback`;
-    const scope = 'channel:moderate+chat:edit+chat:read+channel:manage:broadcast+channel:read:subscriptions+user:read:follows+moderator:read:followers';
+    const scope = 'channel:moderate+chat:edit+chat:read+channel:manage:broadcast+channel:read:subscriptions+user:read:follows+moderator:read:followers+channel:manage:vips';
 
     const state = Math.random().toString(36).substring(7); // Unique state parameter
     const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${state}`;
@@ -193,24 +193,26 @@ app.get('/dashboard', (req, res) => {
     const twitchRefreshToken = req.cookies?.twitchRefreshToken;
     
     if (twitchOAuthToken) {
-        try {
-        if(twitchBotClient.running === false) {
-            twitchBotClient.updateOauthToken(twitchOAuthToken);
-            twitchBotClient.connect();
-        } else {
-            twitchBotClient.updateOauthToken(twitchOAuthToken);
-        } 
-        } catch (error) {
-            twitchBotClient = new TwitchBot(twitchUsername, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchUserID, twitchChannel, wss, db);
-            twitchApiClient = new TwitchApi(twitchOAuthToken, twitchRefreshToken, twitchUserID);
+        if (!twitchBotClient || !twitchApiClient) {
+            // Instantiate the bot and API client if they don't exist
+            twitchApiClient = new TwitchApi(twitchOAuthToken, twitchRefreshToken, twitchUserID, db);
+            twitchBotClient = new TwitchBot(twitchUsername, twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchUserID, twitchChannel, wss, db, twitchApiClient);
             
             wss.setTwitchBot(twitchBotClient);
             wss.setTwichApiClient(twitchApiClient);
-            wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel);
+            wss.updateTwitchInfo(twitchClientId, twitchOAuthToken, twitchRefreshToken, twitchChannel);            
             twitchBotClient.setupCommands();
+        } else {
+            // Update the OAuth token if the bot and API client already exist
+            twitchBotClient.updateOauthToken(twitchOAuthToken);
+            twitchApiClient.setOauthToken(twitchOAuthToken);
+        }
+
+        // Connect the bot if it's not already running
+        if(twitchBotClient.running === false) {
             twitchBotClient.connect();
         }
-        
+
         setTimeout(() => {
             res.render('dashboard', { twitchUsername, twitchChannel, serverHost, webSocketAddress });
         }, 1000);        

@@ -68,8 +68,9 @@ class Clips extends Command {
     }
 
     async playClip(twitchbot, channel, args, userstate) {
-        if(this.checkIfMod(userstate) || this.checkIfVip(userstate)) {
+        
             try {
+                //if(!this.checkIfMod(userstate)) throw new Error('You are not a mod!');
                 const clip = await this.db.getOldestClip();
                 let url = clip.url;
                 let clipId = '';
@@ -83,7 +84,7 @@ class Clips extends Command {
                             clipId = (url.split('twitch.tv/')[1]).split('?')[0];
                         }
                         url = `https://clips.twitch.tv/embed?clip=${clipId}&parent=${this.host}&autoplay=true`;
-                        this.wss.sendToWebSocket({ type: 'clip', data: { url: url, visible: true } }); 
+                        this.wss.sendToWebSocket({ type: 'clip', data: { url: url, visible: true, provider: provider } }); 
                         break;
                     case 'youtube':
                         if (url.includes('youtu.be')) {
@@ -108,19 +109,20 @@ class Clips extends Command {
                 twitchbot.client.say(channel, `${this.name}: ${this.description}`);
                 twitchbot.client.say(channel, `Usage: ${this.usage}`);
             }
-        }   
+           
     }
 
     async stopClip(twitchbot, channel, args, userstate) {
-        if(this.checkIfMod(userstate) || this.checkIfVip(userstate)) {
+        
             try {
+                //if(!this.checkIfMod(userstate)) throw new Error('You are not a mod!');
                 this.wss.sendToWebSocket({ type: 'clip', data: { url: '', visible: false } });
             } catch (err) {
                 console.log(err);
                 twitchbot.client.say(channel, `${this.name}: ${this.description}`);
                 twitchbot.client.say(channel, `Usage: ${this.usage}`);
             }
-        }   
+           
     }
 
     async addClip(twitchbot, channel, args, userstate) {

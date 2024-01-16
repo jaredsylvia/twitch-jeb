@@ -19,6 +19,7 @@ class Quotes extends Command {
 
     async addQuote(twitchbot, channel, args, userstate) {
         try {
+            if(!this.checkIfMod(userstate)) throw new Error('You are not a mod!');
             //remove !addquote from args
             args.shift();
             
@@ -30,7 +31,7 @@ class Quotes extends Command {
             const author = args[1];
             const quoteId = await this.db.addQuote(quote, author);
             //console.log(await this.db.addQuote(quote, author));
-            twitchbot.client.say(channel, `Quote added! Quote #${quoteId}`);
+            twitchbot.client.say(channel, `Quote added by ${userstate.username}! Quote #${quoteId}`);
             
         } catch (err) {
             console.log(err);
@@ -41,6 +42,7 @@ class Quotes extends Command {
 
     async removeQuote(twitchbot, channel, args, userstate) {
         try {
+            if(!this.checkIfMod(userstate)) throw new Error('You are not a mod!');
             const id = args[1];
             await this.db.deleteQuote(id);
             twitchbot.client.say(channel, `Quote removed!`);
